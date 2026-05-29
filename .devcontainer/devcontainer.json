@@ -1,0 +1,20 @@
+{
+  "name": "multi-environment-setting",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "corepack enable && chmod +x scripts/*.sh && (cd apps/web && pnpm install --frozen-lockfile)",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "dbaeumer.vscode-eslint",
+        "GitHub.vscode-github-actions"
+      ]
+    }
+  }
+}

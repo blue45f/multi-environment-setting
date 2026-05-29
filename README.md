@@ -181,6 +181,7 @@ OIDC를 쓰므로 **장기 AWS 키 secret은 없습니다.** 아래는 모두 *v
 ## 6. 빠른 시작 (5분, 원커맨드)
 
 전제: `terraform`·`aws`·`gh`·`node`가 설치돼 있고 AWS/GitHub 로그인 완료. 상세는 [`docs/SETUP.md`](docs/SETUP.md).
+도구 설치가 번거로우면 `.devcontainer`로 VS Code/Codespaces에서 즉시 시작할 수 있습니다(터미널에서 `aws configure`/`gh auth login`만 추가).
 
 ```bash
 # 0) 값 1개 파일만 채운다
