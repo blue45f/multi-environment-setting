@@ -9,7 +9,7 @@ TF_DIR := infra/terraform
 
 .DEFAULT_GOAL := help
 .PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output tf-backend gh-setup \
-        new-service app-install app-dev app-build app-test e2e-local rollback destroy
+        new-service app-install app-dev app-build app-test verify e2e-local rollback destroy
 
 help: ## 명령 목록
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
@@ -50,8 +50,11 @@ app-dev: ## 로컬 미리보기 — SERVICE=web ENV=preview|staging|production
 app-build: ## 앱 빌드 (static export → out/)
 	cd $(APP_DIR) && corepack pnpm build
 
-app-test: ## lint + typecheck + unit test
+app-test: ## lint + typecheck + unit test (단일 서비스 SERVICE=web)
 	cd $(APP_DIR) && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
+
+verify: ## 로컬 전체 검증 — 모든 apps/* + shellcheck + terraform validate (CI와 동일, AWS 불필요)
+	@./scripts/verify.sh
 
 e2e-local: ## AWS 없이 로컬 E2E (build+serve+smoke) — SERVICE=web ENV=preview|staging|production
 	@APP_DIR=$(APP_DIR) ./scripts/e2e-local.sh $(ENV)

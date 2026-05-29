@@ -62,6 +62,7 @@ multi-environment-setting/
 │   ├── new-service.sh            # 새 프론트엔드 서비스(apps/<name>) 스캐폴드
 │   ├── dev.sh                    # 로컬 멀티환경 미리보기 (env 선택)
 │   ├── e2e-local.sh              # AWS 없이 로컬 E2E (build+serve+smoke)
+│   ├── verify.sh                 # 로컬 전체 검증 (모든 apps/* + shellcheck + tf validate)
 │   ├── deploy-s3.sh              # cache-control 분리 S3 업로드
 │   ├── invalidate.sh             # CloudFront invalidation (entry/config만)
 │   ├── promote.sh                # releases/<sha> → current 포인터 전환
@@ -210,6 +211,7 @@ make help             # 전체 명령
 ```bash
 make app-dev   ENV=preview      # 개발 서버로 환경별 미리보기
 make e2e-local ENV=staging      # build → out/ 정적 서빙 → Playwright smoke (AWS 불필요)
+make verify                     # 모든 apps/* 검증 + (설치 시) shellcheck·terraform validate
 ```
 
 `make bootstrap`(실제 AWS 생성)은 계정이 준비되면 그때 실행하면 됩니다. CI의 `validate.yml`도 AWS 없이 통과합니다.
