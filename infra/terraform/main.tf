@@ -33,8 +33,25 @@ locals {
 
   use_custom_domain = var.enable_custom_domain
 
-  # 최종 호스트명
+  # 서비스 집합과 primary(첫 서비스 — custom 도메인이 적용되는 서비스)
+  services        = toset(var.services)
+  primary_service = var.services[0]
+
+  # custom 도메인은 primary 서비스에만 적용한다(나머지는 CloudFront 기본 도메인).
+  # 서비스별 alias 목록: primary면 해당 호스트, 아니면 빈 목록.
   preview_wildcard_host = "*.${var.preview_subdomain}.${var.apex_domain}"
+  preview_aliases = {
+    for s in local.services : s =>
+    (local.use_custom_domain && s == local.primary_service) ? [local.preview_wildcard_host] : []
+  }
+  staging_aliases = {
+    for s in local.services : s =>
+    (local.use_custom_domain && s == local.primary_service) ? [var.staging_host] : []
+  }
+  production_aliases = {
+    for s in local.services : s =>
+    (local.use_custom_domain && s == local.primary_service) ? [var.production_host] : []
+  }
 
   # OIDC subject claim 베이스: repo:OWNER/REPO:...
   github_sub_prefix = "repo:${var.github_owner}/${var.github_repo}"

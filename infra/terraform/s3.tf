@@ -44,40 +44,49 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
 resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
   bucket = aws_s3_bucket.artifacts.id
 
-  # preview(web/pr-*)는 cleanup이 누락돼도 자동 만료 — 비용/orphan 안전망
-  rule {
-    id     = "expire-preview"
-    status = "Enabled"
-    filter {
-      prefix = "${var.service_name}/pr-"
-    }
-    expiration {
-      days = var.preview_expiration_days
-    }
-    noncurrent_version_expiration {
-      noncurrent_days = 7
+  # preview(<service>/pr-*)는 cleanup이 누락돼도 자동 만료 — 비용/orphan 안전망 (서비스별)
+  dynamic "rule" {
+    for_each = local.services
+    content {
+      id     = "expire-preview-${rule.value}"
+      status = "Enabled"
+      filter {
+        prefix = "${rule.value}/pr-"
+      }
+      expiration {
+        days = var.preview_expiration_days
+      }
+      noncurrent_version_expiration {
+        noncurrent_days = 7
+      }
     }
   }
 
-  # 불변 릴리스(web/*/releases/*)는 더 길게 보관 후 만료 (rollback 소스)
-  rule {
-    id     = "expire-staging-releases"
-    status = "Enabled"
-    filter {
-      prefix = "${var.service_name}/staging/releases/"
-    }
-    expiration {
-      days = var.release_expiration_days
+  # 불변 릴리스(<service>/{staging,production}/releases/*)는 길게 보관 후 만료 (rollback 소스, 서비스별)
+  dynamic "rule" {
+    for_each = local.services
+    content {
+      id     = "expire-staging-releases-${rule.value}"
+      status = "Enabled"
+      filter {
+        prefix = "${rule.value}/staging/releases/"
+      }
+      expiration {
+        days = var.release_expiration_days
+      }
     }
   }
-  rule {
-    id     = "expire-production-releases"
-    status = "Enabled"
-    filter {
-      prefix = "${var.service_name}/production/releases/"
-    }
-    expiration {
-      days = var.release_expiration_days
+  dynamic "rule" {
+    for_each = local.services
+    content {
+      id     = "expire-production-releases-${rule.value}"
+      status = "Enabled"
+      filter {
+        prefix = "${rule.value}/production/releases/"
+      }
+      expiration {
+        days = var.release_expiration_days
+      }
     }
   }
 
@@ -91,7 +100,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
   }
 }
 
-# OAC를 통해 들어오는 CloudFront(이 계정의 3개 배포)만 GetObject 허용
+# OAC를 통해 들어오는 CloudFront(모든 서비스의 모든 배포)만 GetObject 허용
 data "aws_iam_policy_document" "artifacts_bucket" {
   statement {
     sid     = "AllowCloudFrontReadViaOAC"
@@ -105,11 +114,11 @@ data "aws_iam_policy_document" "artifacts_bucket" {
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values = [
-        aws_cloudfront_distribution.preview.arn,
-        aws_cloudfront_distribution.staging.arn,
-        aws_cloudfront_distribution.production.arn,
-      ]
+      values = concat(
+        [for d in aws_cloudfront_distribution.preview : d.arn],
+        [for d in aws_cloudfront_distribution.staging : d.arn],
+        [for d in aws_cloudfront_distribution.production : d.arn],
+      )
     }
   }
 }

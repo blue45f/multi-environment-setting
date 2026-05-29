@@ -54,8 +54,8 @@ resource "aws_route53_record" "preview_a" {
   name    = local.preview_wildcard_host
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.preview.domain_name
-    zone_id                = aws_cloudfront_distribution.preview.hosted_zone_id
+    name                   = aws_cloudfront_distribution.preview[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.preview[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -66,8 +66,8 @@ resource "aws_route53_record" "preview_aaaa" {
   name    = local.preview_wildcard_host
   type    = "AAAA"
   alias {
-    name                   = aws_cloudfront_distribution.preview.domain_name
-    zone_id                = aws_cloudfront_distribution.preview.hosted_zone_id
+    name                   = aws_cloudfront_distribution.preview[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.preview[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -78,8 +78,8 @@ resource "aws_route53_record" "staging_a" {
   name    = var.staging_host
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.staging.domain_name
-    zone_id                = aws_cloudfront_distribution.staging.hosted_zone_id
+    name                   = aws_cloudfront_distribution.staging[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.staging[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -90,8 +90,8 @@ resource "aws_route53_record" "staging_aaaa" {
   name    = var.staging_host
   type    = "AAAA"
   alias {
-    name                   = aws_cloudfront_distribution.staging.domain_name
-    zone_id                = aws_cloudfront_distribution.staging.hosted_zone_id
+    name                   = aws_cloudfront_distribution.staging[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.staging[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -102,8 +102,8 @@ resource "aws_route53_record" "production_a" {
   name    = var.production_host
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.production.domain_name
-    zone_id                = aws_cloudfront_distribution.production.hosted_zone_id
+    name                   = aws_cloudfront_distribution.production[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.production[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -114,8 +114,8 @@ resource "aws_route53_record" "production_aaaa" {
   name    = var.production_host
   type    = "AAAA"
   alias {
-    name                   = aws_cloudfront_distribution.production.domain_name
-    zone_id                = aws_cloudfront_distribution.production.hosted_zone_id
+    name                   = aws_cloudfront_distribution.production[local.primary_service].domain_name
+    zone_id                = aws_cloudfront_distribution.production[local.primary_service].hosted_zone_id
     evaluate_target_health = false
   }
 }

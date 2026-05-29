@@ -1,8 +1,10 @@
 # ──────────────────────────────────────────────────────────────────────────
-# CloudFront — 환경별 배포 3개가 같은 S3 버킷을 origin으로 공유한다.
-#   preview      : *.preview.example.com  → CloudFront Function이 host로 prefix 라우팅
-#   staging      : staging.example.com    → origin path /web/staging/current 고정
-#   production   : www.example.com        → origin path /web/production/current 고정
+# CloudFront — 서비스(var.services)마다 배포 3개(preview/staging/production)를 만든다.
+#   모든 배포가 같은 S3 버킷을 origin으로 공유하고, S3 prefix(<service>/...)로 분리된다.
+#   preview      : 서비스별 CloudFront Function이 pr-<n> → /<service>/pr-<n>/ 라우팅
+#   staging      : origin path /<service>/staging/current 고정
+#   production   : origin path /<service>/production/current 고정
+#   custom 도메인(alias/인증서)은 primary 서비스(var.services[0])에만 적용된다.
 # ──────────────────────────────────────────────────────────────────────────
 
 resource "aws_cloudfront_origin_access_control" "s3" {
@@ -13,16 +15,17 @@ resource "aws_cloudfront_origin_access_control" "s3" {
   signing_protocol                  = "sigv4"
 }
 
+# 서비스별 preview 라우팅 Function (서비스명이 템플릿으로 주입됨)
 resource "aws_cloudfront_function" "preview_router" {
-  name    = "${var.service_name}-preview-router"
+  for_each = local.services
+
+  name    = "${each.key}-preview-router"
   runtime = "cloudfront-js-2.0"
-  comment = "Route pr-<n> host/path to S3 prefix web/pr-<n>/ with SPA fallback"
+  comment = "Route pr-<n> to S3 prefix ${each.key}/pr-<n>/ with SPA fallback"
   publish = true
-  code    = file("${path.module}/functions/preview-router.js")
+  code    = templatefile("${path.module}/functions/preview-router.js.tftpl", { service = each.key })
 }
 
-# AWS 관리형 정책: 캐시는 origin Cache-Control 헤더를 존중(CachingOptimized),
-# 보안 헤더는 SecurityHeadersPolicy 사용.
 data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
@@ -32,17 +35,19 @@ data "aws_cloudfront_response_headers_policy" "security_headers" {
 }
 
 locals {
-  s3_origin_id = "${var.service_name}-s3-origin"
+  s3_origin_id = "s3-origin"
 }
 
-# ── preview distribution (멀티테넌트) ───────────────────────────────────────
+# ── preview distributions (서비스별, 멀티테넌트 pr-*) ───────────────────────
 resource "aws_cloudfront_distribution" "preview" {
+  for_each = local.services
+
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "${var.service_name} preview (multi-tenant pr-*)"
+  comment             = "${each.key} preview (multi-tenant pr-*)"
   default_root_object = "index.html"
   price_class         = "PriceClass_200"
-  aliases             = local.use_custom_domain ? [local.preview_wildcard_host] : []
+  aliases             = local.preview_aliases[each.key]
 
   origin {
     domain_name              = aws_s3_bucket.artifacts.bucket_regional_domain_name
@@ -61,12 +66,9 @@ resource "aws_cloudfront_distribution" "preview" {
 
     function_association {
       event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.preview_router.arn
+      function_arn = aws_cloudfront_function.preview_router[each.key].arn
     }
   }
-
-  # preview의 SPA fallback은 CloudFront Function이 처리하므로 custom_error_response를 쓰지 않는다.
-  # (custom_error_response의 /index.html은 테넌트 prefix를 반영하지 못함)
 
   restrictions {
     geo_restriction {
@@ -75,27 +77,29 @@ resource "aws_cloudfront_distribution" "preview" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = local.use_custom_domain ? null : true
-    acm_certificate_arn            = local.use_custom_domain ? one(aws_acm_certificate_validation.main[*].certificate_arn) : null
-    ssl_support_method             = local.use_custom_domain ? "sni-only" : null
-    minimum_protocol_version       = local.use_custom_domain ? "TLSv1.2_2021" : null
+    cloudfront_default_certificate = length(local.preview_aliases[each.key]) == 0 ? true : null
+    acm_certificate_arn            = length(local.preview_aliases[each.key]) == 0 ? null : one(aws_acm_certificate_validation.main[*].certificate_arn)
+    ssl_support_method             = length(local.preview_aliases[each.key]) == 0 ? null : "sni-only"
+    minimum_protocol_version       = length(local.preview_aliases[each.key]) == 0 ? null : "TLSv1.2_2021"
   }
 }
 
-# ── staging distribution (단일 테넌트) ──────────────────────────────────────
+# ── staging distributions (서비스별, 단일 테넌트) ───────────────────────────
 resource "aws_cloudfront_distribution" "staging" {
+  for_each = local.services
+
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "${var.service_name} staging"
+  comment             = "${each.key} staging"
   default_root_object = "index.html"
   price_class         = "PriceClass_200"
-  aliases             = local.use_custom_domain ? [var.staging_host] : []
+  aliases             = local.staging_aliases[each.key]
 
   origin {
     domain_name              = aws_s3_bucket.artifacts.bucket_regional_domain_name
     origin_id                = local.s3_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
-    origin_path              = "/${var.service_name}/staging/current"
+    origin_path              = "/${each.key}/staging/current"
   }
 
   default_cache_behavior {
@@ -128,27 +132,29 @@ resource "aws_cloudfront_distribution" "staging" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = local.use_custom_domain ? null : true
-    acm_certificate_arn            = local.use_custom_domain ? one(aws_acm_certificate_validation.main[*].certificate_arn) : null
-    ssl_support_method             = local.use_custom_domain ? "sni-only" : null
-    minimum_protocol_version       = local.use_custom_domain ? "TLSv1.2_2021" : null
+    cloudfront_default_certificate = length(local.staging_aliases[each.key]) == 0 ? true : null
+    acm_certificate_arn            = length(local.staging_aliases[each.key]) == 0 ? null : one(aws_acm_certificate_validation.main[*].certificate_arn)
+    ssl_support_method             = length(local.staging_aliases[each.key]) == 0 ? null : "sni-only"
+    minimum_protocol_version       = length(local.staging_aliases[each.key]) == 0 ? null : "TLSv1.2_2021"
   }
 }
 
-# ── production distribution (단일 테넌트) ───────────────────────────────────
+# ── production distributions (서비스별, 단일 테넌트) ────────────────────────
 resource "aws_cloudfront_distribution" "production" {
+  for_each = local.services
+
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "${var.service_name} production"
+  comment             = "${each.key} production"
   default_root_object = "index.html"
   price_class         = "PriceClass_All"
-  aliases             = local.use_custom_domain ? [var.production_host] : []
+  aliases             = local.production_aliases[each.key]
 
   origin {
     domain_name              = aws_s3_bucket.artifacts.bucket_regional_domain_name
     origin_id                = local.s3_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
-    origin_path              = "/${var.service_name}/production/current"
+    origin_path              = "/${each.key}/production/current"
   }
 
   default_cache_behavior {
@@ -181,9 +187,9 @@ resource "aws_cloudfront_distribution" "production" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = local.use_custom_domain ? null : true
-    acm_certificate_arn            = local.use_custom_domain ? one(aws_acm_certificate_validation.main[*].certificate_arn) : null
-    ssl_support_method             = local.use_custom_domain ? "sni-only" : null
-    minimum_protocol_version       = local.use_custom_domain ? "TLSv1.2_2021" : null
+    cloudfront_default_certificate = length(local.production_aliases[each.key]) == 0 ? true : null
+    acm_certificate_arn            = length(local.production_aliases[each.key]) == 0 ? null : one(aws_acm_certificate_validation.main[*].certificate_arn)
+    ssl_support_method             = length(local.production_aliases[each.key]) == 0 ? null : "sni-only"
+    minimum_protocol_version       = length(local.production_aliases[each.key]) == 0 ? null : "TLSv1.2_2021"
   }
 }

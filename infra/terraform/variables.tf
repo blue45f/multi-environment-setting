@@ -1,7 +1,22 @@
 variable "service_name" {
-  description = "서비스/앱 이름. 모든 리소스 이름과 S3 prefix(web/...)의 접두사로 쓰인다."
+  description = "프로젝트 이름. 공유 artifact 버킷 이름 등 서비스 공통 리소스의 접두사."
   type        = string
   default     = "web"
+}
+
+variable "services" {
+  description = <<-EOT
+    이 저장소가 배포하는 프론트엔드 서비스 목록. 각 서비스는 자체 배포 3종(preview/staging/production)
+    + OIDC 역할 4종 + preview 라우팅 Function + S3 prefix(<service>/...)를 가진다.
+    앱 추가는 scripts/new-service.sh. 첫 번째 서비스가 'primary'로, custom 도메인이 적용된다(아래 참고).
+  EOT
+  type        = list(string)
+  default     = ["web"]
+
+  validation {
+    condition     = length(var.services) > 0
+    error_message = "services는 최소 1개여야 합니다."
+  }
 }
 
 variable "aws_region" {
