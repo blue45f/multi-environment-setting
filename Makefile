@@ -2,13 +2,14 @@
 #   make            도움말
 #   make bootstrap  원커맨드 구축 (preflight → terraform apply → GitHub 설정)
 SHELL := /usr/bin/env bash
-APP_DIR := apps/web
-TF_DIR := infra/terraform
+SERVICE ?= web
 ENV ?= preview
+APP_DIR := apps/$(SERVICE)
+TF_DIR := infra/terraform
 
 .DEFAULT_GOAL := help
 .PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output tf-backend gh-setup \
-        app-install app-dev app-build app-test e2e-local rollback destroy
+        new-service app-install app-dev app-build app-test e2e-local rollback destroy
 
 help: ## 명령 목록
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
@@ -37,11 +38,14 @@ tf-backend: ## (팀/운영) 원격 state S3+DynamoDB 생성 + backend.hcl 작성
 gh-setup: ## terraform output → GitHub variables + environments (PROD_REVIEWER=<login> 선택)
 	@./scripts/gh-setup.sh
 
+new-service: ## 새 프론트엔드 서비스 스캐폴드 — NAME=<service-name>
+	@./scripts/new-service.sh $(NAME)
+
 app-install: ## 앱 의존성 설치
 	cd $(APP_DIR) && corepack pnpm install
 
-app-dev: ## 로컬 미리보기 — ENV=preview|staging|production
-	@./scripts/dev.sh $(ENV)
+app-dev: ## 로컬 미리보기 — SERVICE=web ENV=preview|staging|production
+	@APP_DIR=$(APP_DIR) ./scripts/dev.sh $(ENV)
 
 app-build: ## 앱 빌드 (static export → out/)
 	cd $(APP_DIR) && corepack pnpm build
@@ -49,11 +53,11 @@ app-build: ## 앱 빌드 (static export → out/)
 app-test: ## lint + typecheck + unit test
 	cd $(APP_DIR) && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
 
-e2e-local: ## AWS 없이 로컬 E2E (build+serve+smoke) — ENV=preview|staging|production
-	@./scripts/e2e-local.sh $(ENV)
+e2e-local: ## AWS 없이 로컬 E2E (build+serve+smoke) — SERVICE=web ENV=preview|staging|production
+	@APP_DIR=$(APP_DIR) ./scripts/e2e-local.sh $(ENV)
 
-rollback: ## 롤백 — ENV=production SHA=<sha> DIST=<distribution_id>
-	ARTIFACT_BUCKET=$$(terraform -chdir=$(TF_DIR) output -raw artifact_bucket) \
+rollback: ## 롤백 — SERVICE=web ENV=production SHA=<sha> DIST=<distribution_id>
+	ARTIFACT_BUCKET=$$(terraform -chdir=$(TF_DIR) output -raw artifact_bucket) SERVICE_NAME=$(SERVICE) \
 	  ./scripts/rollback.sh $(ENV) $(SHA) $(DIST)
 
 destroy: ## 인프라 제거 (주의: 모든 환경 삭제)

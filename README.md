@@ -43,7 +43,7 @@ multi-environment-setting/
 │   │   ├── route53.tf
 │   │   ├── outputs.tf
 │   │   ├── functions/
-│   │   │   └── preview-router.js # CloudFront Function: host → S3 prefix
+│   │   │   └── preview-router.js.tftpl # CloudFront Function 템플릿(서비스별 주입)
 │   │   ├── terraform.tfvars.example
 │   │   └── README.md
 │   └── cloudformation/
@@ -59,6 +59,7 @@ multi-environment-setting/
 │   ├── bootstrap.sh              # 원커맨드 구축 (preflight → apply → gh-setup)
 │   ├── gh-setup.sh               # terraform output → GitHub 변수/환경 자동 설정
 │   ├── tf-backend.sh             # (선택) 원격 state S3+DynamoDB 생성
+│   ├── new-service.sh            # 새 프론트엔드 서비스(apps/<name>) 스캐폴드
 │   ├── dev.sh                    # 로컬 멀티환경 미리보기 (env 선택)
 │   ├── e2e-local.sh              # AWS 없이 로컬 E2E (build+serve+smoke)
 │   ├── deploy-s3.sh              # cache-control 분리 S3 업로드
@@ -139,33 +140,27 @@ s3://<ARTIFACT_BUCKET>/
       current/...                 # production CloudFront origin path = /web/production/current
 ```
 
-- **preview**: CloudFront Function(`preview-router.js`)이 `pr-123.preview.example.com` → `/web/pr-123/`로 URI를 재작성. 배포 = `aws s3 sync out s3://.../web/pr-123/`.
-- **staging/production**: CloudFront origin path가 `/web/<env>/current`로 **고정**. 배포 = `releases/<sha>/`에 올린 뒤 `current/`로 동기화(`promote.sh`). 롤백 = 이전 `releases/<sha>/`를 `current/`로 되돌림(`rollback.sh`).
+- **멀티 서비스**: 위 `web`는 `var.services`의 한 서비스 예시입니다. 서비스마다 같은 레이아웃(`<service>/...`)과 배포 3종·역할·함수를 갖습니다. 앱 추가는 `make new-service NAME=<name>`.
+- **preview**: 서비스별 CloudFront Function(`preview-router.js.tftpl`, 서비스명이 주입됨)이 `pr-123.preview.example.com`(또는 `<cf-domain>/pr-123/`) → `/<service>/pr-123/`로 URI를 재작성. 배포 = `aws s3 sync out s3://.../<service>/pr-123/`.
+- **staging/production**: CloudFront origin path가 `/<service>/<env>/current`로 **고정**. 배포 = `releases/<sha>/`에 올린 뒤 `current/`로 동기화(`promote.sh`). 롤백 = 이전 `releases/<sha>/`를 `current/`로 되돌림(`rollback.sh`).
 
 ---
 
 ## 5. GitHub 설정 (repo variables / secrets / environments)
 
-OIDC를 쓰므로 **장기 AWS 키 secret은 없습니다.** 아래는 모두 *variables*(민감하지 않음)로 둡니다. Terraform `outputs`가 실제 값을 출력합니다.
+OIDC를 쓰므로 **장기 AWS 키 secret은 없습니다.** 아래 변수는 모두 **`make gh-setup`(= `scripts/gh-setup.sh`)이 `terraform output`에서 읽어 자동 설정**합니다. 손으로 넣을 필요가 없습니다.
 
 ### Repository variables (`Settings → Secrets and variables → Actions → Variables`)
 
-| 변수 | 예시 | 출처 |
+| 변수 | 값 | 설정 |
 | :--- | :--- | :--- |
-| `AWS_REGION` | `ap-northeast-2` | 직접 설정 |
-| `ARTIFACT_BUCKET` | `web-frontend-artifacts-123456789012-ap-northeast-2` | `terraform output artifact_bucket` |
-| `AWS_PREVIEW_ROLE_ARN` | `arn:aws:iam::123456789012:role/web-gha-preview` | `terraform output preview_role_arn` |
-| `AWS_STAGING_ROLE_ARN` | `arn:aws:iam::123456789012:role/web-gha-staging` | `terraform output staging_role_arn` |
-| `AWS_PRODUCTION_ROLE_ARN` | `arn:aws:iam::123456789012:role/web-gha-production` | `terraform output production_role_arn` |
-| `AWS_CLEANUP_ROLE_ARN` | `arn:aws:iam::123456789012:role/web-gha-cleanup` | `terraform output cleanup_role_arn` |
-| `PREVIEW_DISTRIBUTION_ID` | `E1AAAAAAAAAAAA` | `terraform output preview_distribution_id` |
-| `STAGING_DISTRIBUTION_ID` | `E2BBBBBBBBBBBB` | `terraform output staging_distribution_id` |
-| `PRODUCTION_DISTRIBUTION_ID` | `E3CCCCCCCCCCCC` | `terraform output production_distribution_id` |
-| `PREVIEW_BASE_DOMAIN` | `preview.example.com` | 직접 설정 (custom 도메인 시) |
-| `PREVIEW_CLOUDFRONT_DOMAIN` | `d111.cloudfront.net` | (선택) 도메인 없이 테스트 시 path 기반 preview URL용 |
-| `STAGING_DOMAIN` | `staging.example.com` | (선택) staging smoke용 — 비우면 smoke skip |
-| `PRODUCTION_DOMAIN` | `www.example.com` | (선택) production smoke용 — 비우면 smoke skip |
-| `AMPLIFY_APP_ID` | (비워둠) | Pattern B를 쓸 때만 |
+| `AWS_REGION` | `ap-northeast-2` | `make gh-setup` 자동 |
+| `ARTIFACT_BUCKET` | `web-frontend-artifacts-<account>-<region>` (모든 서비스 공유) | `make gh-setup` 자동 |
+| `SERVICES` | `["web"]` (JSON 배열 — 워크플로 매트릭스) | `make gh-setup` 자동 |
+| `DEPLOY_CONFIG` | `{"web":{preview_role_arn,…,*_distribution_id,*_cloudfront_domain}}` (JSON 맵) | `make gh-setup` 자동 |
+| `AMPLIFY_APP_ID` | (비워둠) | Pattern B 쓸 때만 직접 |
+
+> 워크플로는 `SERVICES`를 매트릭스로 돌고, 서비스별 역할/배포 ID/도메인은 `fromJSON(vars.DEPLOY_CONFIG)[service]`에서 가져옵니다. `DEPLOY_CONFIG`가 비어 있으면(부트스트랩 전) 배포 워크플로는 자동 skip됩니다.
 
 ### Environments (`Settings → Environments`)
 

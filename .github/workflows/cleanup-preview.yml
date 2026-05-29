@@ -1,9 +1,9 @@
 name: cleanup-preview
 
-# 끝난 preview 리소스를 정리한다. (가이드 §10)
-#   - PR close: 해당 PR의 S3 prefix + Amplify branch 즉시 삭제 (소유자 명확)
+# 끝난 preview 리소스를 서비스(var.services)별로 정리한다. (가이드 §10)
+#   - PR close: 각 서비스의 S3 prefix(<service>/pr-<n>) + Amplify branch 즉시 삭제
 #   - schedule: orphan 후보를 먼저 리포트(dry-run), 제한 범위만 삭제
-# 안전 가드(web/pr-<숫자>/ 패턴, open PR 보존, grace period, 일일 삭제 한도)는
+# 안전 가드(<service>/pr-<숫자>/ 패턴, open PR 보존, grace period, 일일 삭제 한도)는
 # scripts/cleanup-preview.sh 안에서 강제한다.
 
 on:
@@ -26,40 +26,38 @@ concurrency:
   group: cleanup-preview
   cancel-in-progress: false
 
-env:
-  SERVICE_NAME: web
-
 jobs:
   cleanup:
+    if: vars.DEPLOY_CONFIG != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(vars.SERVICES || '["web"]') }}
     runs-on: ubuntu-latest
     environment: preview
+    env:
+      SERVICE_NAME: ${{ matrix.service }}
+      ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET }}
+      AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
     steps:
       - uses: actions/checkout@v6
 
       - name: Configure AWS credentials (OIDC, cleanup role)
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_CLEANUP_ROLE_ARN }}
+          role-to-assume: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].cleanup_role_arn }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      # PR이 닫힌 경우: 그 PR만 즉시 삭제
       - name: Delete closed PR preview
         if: github.event_name == 'pull_request'
         run: ./scripts/cleanup-preview.sh delete "${{ github.event.pull_request.number }}"
-        env:
-          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET }}
-          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
 
-      # schedule / 수동 실행: orphan 후보 sweep (기본 dry-run)
       - name: Sweep orphan previews
         if: github.event_name != 'pull_request'
         run: ./scripts/cleanup-preview.sh sweep
         env:
-          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET }}
-          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          # schedule은 항상 dry-run(리포트만). 수동 실행 시 dry_run=false면 실제 삭제.
           DRY_RUN: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
           GRACE_DAYS: "3"
           MAX_DELETIONS: "20"
@@ -68,6 +66,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cleanup-report
+          name: cleanup-report-${{ matrix.service }}
           path: cleanup-report/
           if-no-files-found: ignore

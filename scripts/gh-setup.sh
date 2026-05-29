@@ -12,20 +12,17 @@ TF_DIR="${TF_DIR:-infra/terraform}"
 REPO="${GH_REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 REVIEWER="${PROD_REVIEWER:-}"
 
-tf() { terraform -chdir="$TF_DIR" output -raw "$1"; }
-setvar() { printf '  %-28s\n' "$1"; gh variable set "$1" --repo "$REPO" --body "$2"; }
+tf_raw() { terraform -chdir="$TF_DIR" output -raw "$1"; }
+tf_json() { terraform -chdir="$TF_DIR" output -json "$1"; }
+setvar() { printf '  %-15s\n' "$1"; gh variable set "$1" --repo "$REPO" --body "$2"; }
 
+# 멀티 서비스: 공유 값 2개 + SERVICES(JSON 배열) + DEPLOY_CONFIG(service→설정 JSON 맵).
+# 워크플로가 매트릭스로 SERVICES를 돌고, 서비스별 역할/배포 ID/도메인을 DEPLOY_CONFIG에서 읽는다.
 echo "==> repository variables ($REPO)"
-setvar AWS_REGION                 "$(tf aws_region)"
-setvar ARTIFACT_BUCKET            "$(tf artifact_bucket)"
-setvar AWS_PREVIEW_ROLE_ARN       "$(tf preview_role_arn)"
-setvar AWS_STAGING_ROLE_ARN       "$(tf staging_role_arn)"
-setvar AWS_PRODUCTION_ROLE_ARN    "$(tf production_role_arn)"
-setvar AWS_CLEANUP_ROLE_ARN       "$(tf cleanup_role_arn)"
-setvar PREVIEW_DISTRIBUTION_ID    "$(tf preview_distribution_id)"
-setvar STAGING_DISTRIBUTION_ID    "$(tf staging_distribution_id)"
-setvar PRODUCTION_DISTRIBUTION_ID "$(tf production_distribution_id)"
-setvar PREVIEW_CLOUDFRONT_DOMAIN  "$(tf preview_cloudfront_domain)"
+setvar AWS_REGION     "$(tf_raw aws_region)"
+setvar ARTIFACT_BUCKET "$(tf_raw artifact_bucket)"
+setvar SERVICES       "$(tf_json services)"
+setvar DEPLOY_CONFIG  "$(tf_json deploy_config)"
 
 echo "==> environments"
 for env in preview staging production; do

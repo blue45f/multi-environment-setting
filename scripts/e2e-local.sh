@@ -6,7 +6,7 @@ set -euo pipefail
 
 ENVNAME="${1:-preview}"
 PORT="${PORT:-4173}"
-APP_DIR="apps/web"
+APP_DIR="${APP_DIR:-apps/web}" # Makefile이 SERVICE에 맞춰 전달 (예: apps/admin)
 
 cd "$APP_DIR"
 SRC="public/env.${ENVNAME}.json"

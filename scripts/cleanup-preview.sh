@@ -50,8 +50,8 @@ delete_pr() {
   echo "==> delete s3://${ARTIFACT_BUCKET}/${prefix}"
   aws s3 rm "s3://${ARTIFACT_BUCKET}/${prefix}" --recursive
   if [ -n "$AMPLIFY_APP_ID" ]; then
-    echo "==> delete amplify branch pr-${pr} (app ${AMPLIFY_APP_ID})"
-    aws amplify delete-branch --app-id "$AMPLIFY_APP_ID" --branch-name "pr-${pr}" || true
+    echo "==> delete amplify branch ${SERVICE_NAME}-pr-${pr} (app ${AMPLIFY_APP_ID})"
+    aws amplify delete-branch --app-id "$AMPLIFY_APP_ID" --branch-name "${SERVICE_NAME}-pr-${pr}" || true
   fi
 }
 

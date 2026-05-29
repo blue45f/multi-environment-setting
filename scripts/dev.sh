@@ -7,7 +7,7 @@
 set -euo pipefail
 
 ENVNAME="${1:-preview}"
-APP_DIR="apps/web"
+APP_DIR="${APP_DIR:-apps/web}" # Makefile이 SERVICE에 맞춰 전달 (예: apps/admin)
 SRC="${APP_DIR}/public/env.${ENVNAME}.json"
 
 if [ ! -f "$SRC" ]; then

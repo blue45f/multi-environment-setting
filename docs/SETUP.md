@@ -97,8 +97,8 @@ terraform apply
 ### 2.3 출력값 확인
 
 ```bash
-terraform output
-terraform output -raw gh_variable_commands   # GitHub 변수 설정 명령 모음
+terraform output                       # 서비스별 배포 ID/역할/도메인 (맵)
+terraform output -json deploy_config   # gh-setup이 GitHub DEPLOY_CONFIG로 넣는 통합 설정
 ```
 
 ### 2.4 (나중에) custom 도메인 켜기
@@ -132,38 +132,27 @@ terraform -chdir=infra/terraform init -backend-config=backend.hcl -migrate-state
 
 ## 3. GitHub 설정
 
-### 3.1 Repository variables
+### 3.1 Repository variables — `make gh-setup`이 자동 설정
 
-`terraform output -raw gh_variable_commands` 결과를 그대로 실행하거나 수동 설정합니다.
-
-```bash
-# 예시 — 실제 값은 terraform output에서 가져옵니다
-gh variable set AWS_REGION --body "ap-northeast-2"
-gh variable set ARTIFACT_BUCKET --body "web-frontend-artifacts-123456789012-ap-northeast-2"
-gh variable set AWS_PREVIEW_ROLE_ARN --body "arn:aws:iam::123456789012:role/web-gha-preview"
-gh variable set AWS_STAGING_ROLE_ARN --body "arn:aws:iam::123456789012:role/web-gha-staging"
-gh variable set AWS_PRODUCTION_ROLE_ARN --body "arn:aws:iam::123456789012:role/web-gha-production"
-gh variable set AWS_CLEANUP_ROLE_ARN --body "arn:aws:iam::123456789012:role/web-gha-cleanup"
-gh variable set PREVIEW_DISTRIBUTION_ID --body "E1AAAAAAAAAAAA"
-gh variable set STAGING_DISTRIBUTION_ID --body "E2BBBBBBBBBBBB"
-gh variable set PRODUCTION_DISTRIBUTION_ID --body "E3CCCCCCCCCCCC"
-```
-
-**도메인을 쓰는지에 따라 URL 변수를 설정합니다:**
+`make gh-setup`(= `scripts/gh-setup.sh`)이 `terraform output`을 읽어 아래 4개 변수를 자동으로 넣습니다. 손으로 설정할 필요가 없습니다.
 
 ```bash
-# (A) custom 도메인 사용 시
-gh variable set PREVIEW_BASE_DOMAIN --body "preview.example.com"
-gh variable set STAGING_DOMAIN --body "staging.example.com"
-gh variable set PRODUCTION_DOMAIN --body "www.example.com"
-
-# (B) 도메인 없이 CloudFront 기본 도메인으로 테스트 시 (preview는 path 기반 접근)
-gh variable set PREVIEW_CLOUDFRONT_DOMAIN \
-  --body "$(terraform -chdir=infra/terraform output -raw preview_cloudfront_domain)"
-# STAGING_DOMAIN / PRODUCTION_DOMAIN 은 비워두면 smoke 단계가 자동 skip 됩니다.
+make gh-setup
+#   production 필수 리뷰어까지 지정하려면: PROD_REVIEWER=<github-login> make gh-setup
 ```
 
-> 변수가 비어 있으면 워크플로의 smoke/URL 단계가 자동으로 건너뛰도록 작성돼 있어, 도메인 없이도 배포 자체는 동작합니다.
+설정되는 변수:
+
+| 변수 | 값 |
+| :--- | :--- |
+| `AWS_REGION` | 배포 리전 |
+| `ARTIFACT_BUCKET` | 공유 artifact 버킷 이름 |
+| `SERVICES` | 서비스 목록 JSON 배열 (예 `["web"]`) — 워크플로 매트릭스 |
+| `DEPLOY_CONFIG` | 서비스 → {역할 ARN, 배포 ID, CloudFront 도메인} JSON 맵 |
+
+워크플로는 `SERVICES`를 매트릭스로 돌고 서비스별 값은 `fromJSON(vars.DEPLOY_CONFIG)[service]`에서 읽습니다. smoke는 CloudFront 도메인으로 동작하므로 custom 도메인 여부와 무관하게 별도 도메인 변수가 필요 없습니다.
+
+> (Pattern B Amplify를 쓸 때만) `gh variable set AMPLIFY_APP_ID --body <app-id>` 를 추가합니다.
 
 ### 3.2 Environments
 
@@ -212,6 +201,32 @@ pnpm build                  # out/ 생성 확인 (static export)
 ```
 
 > **AWS 계정이 아직 없어도** 여기까지(빌드·런타임 config·smoke)는 전부 로컬에서 검증됩니다. 실제 인프라(`make bootstrap`)는 계정이 준비된 뒤 실행하세요.
+
+### 4.5 멀티 서비스 (앱 여러 개 굴리기)
+
+한 저장소에서 여러 프론트엔드 앱(예: `web`, `admin`)을 각각의 preview/staging/production으로 운영할 수 있습니다.
+
+```bash
+make new-service NAME=admin      # apps/admin 스캐폴드 (apps/web 템플릿 복사)
+```
+
+그 다음 `infra/terraform/terraform.tfvars`에서 services에 추가하고 재적용합니다:
+
+```hcl
+services = ["web", "admin"]      # 첫 번째가 primary (custom 도메인 적용 대상)
+```
+
+```bash
+make tf-apply    # admin의 preview/staging/production 배포 3종 + OIDC 역할 4종 + 라우팅 함수 생성
+make gh-setup    # SERVICES=["web","admin"], DEPLOY_CONFIG에 admin 추가
+```
+
+이후 동작:
+
+- **워크플로**(preview/deploy/cleanup)는 `SERVICES`를 **매트릭스**로 돌아 서비스마다 빌드·배포·정리합니다. 추가 워크플로 작성 불필요.
+- 각 서비스는 S3 prefix `<service>/...`, 역할 `<service>-gha-*`, 배포 ID/도메인은 `DEPLOY_CONFIG[<service>]`로 분리됩니다.
+- **custom 도메인은 primary 서비스(`services[0]`)에만** 적용됩니다. 나머지 서비스는 CloudFront 기본 도메인을 쓰며, 필요하면 `route53.tf`/`service_hosts`를 확장해 도메인을 추가합니다.
+- 로컬 확인: `make app-dev SERVICE=admin ENV=staging`, `make e2e-local SERVICE=admin`(또는 `cd apps/admin && pnpm build`).
 
 ---
 
@@ -265,7 +280,7 @@ flowchart LR
 | 바꾸는 것 | 같이 고쳐야 하는 곳 |
 | :--- | :--- |
 | `service_name`(`web`) | tfvars(대부분 자동 전파), 워크플로 `env.SERVICE_NAME` 3개 |
-| preview prefix(`pr-`) | `infra/terraform/functions/preview-router.js`(라우팅·검증), `scripts/cleanup-preview.sh`(가드 패턴), `github-oidc.tf`(role resource ARN), 워크플로 preview job |
+| preview prefix(`pr-`) | `infra/terraform/functions/preview-router.js.tftpl`(라우팅·검증), `scripts/cleanup-preview.sh`(가드 패턴), `github-oidc.tf`(role resource ARN), 워크플로 preview job |
 | `current`/`releases` 구조 | `scripts/promote.sh`·`rollback.sh`, `cloudfront.tf`의 `origin_path` |
 | 앱 디렉터리(`apps/web`) | 워크플로 `env.APP_DIR`/`OUTPUT_DIR`, `amplify.yml` |
 
@@ -278,7 +293,7 @@ flowchart LR
 | 항목 | 원본 가이드 | 이 저장소 (보정) |
 | :--- | :--- | :--- |
 | GitHub Action 버전 | `upload-artifact@v6`, `github-script@v8` | 최신 기준 `upload-artifact@v7`, `download-artifact@v8`, `github-script@v9` (checkout/setup-node/configure-aws는 `@v6` 유효) |
-| 멀티테넌트 preview 라우팅 | "PR마다 URL" 개념만 서술 | 단일 CloudFront + **CloudFront Function**(`preview-router.js`)으로 host/path → S3 prefix 라우팅을 실제 구현 |
+| 멀티테넌트 preview 라우팅 | "PR마다 URL" 개념만 서술 | 단일 CloudFront + **CloudFront Function**(`preview-router.js.tftpl`)으로 host/path → S3 prefix 라우팅을 실제 구현 |
 | preview의 SPA fallback | CustomErrorResponse `/index.html` 예시 | preview는 테넌트 prefix를 반영해야 하므로 **Function 내부에서 fallback** 처리(CustomErrorResponse는 staging/production에만) |
 | ACM 리전 | 리전 언급 없음 | CloudFront용 ACM은 반드시 **us-east-1** — Terraform이 provider alias로 처리 |
 | Next RSC 캐시 | `index.html`/asset만 언급 | App Router static export의 `*.txt`(RSC 페이로드)도 **no-cache** 처리(`deploy-s3.sh`) |

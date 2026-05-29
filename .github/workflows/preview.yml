@@ -1,8 +1,10 @@
 name: preview
 
-# PR마다 고유 preview URL을 만든다. (가이드 §4.4)
-#   lint/typecheck/test/build 통과 → S3 업로드 → CloudFront invalidation → PR 코멘트
-# PR close 시 정리는 cleanup-preview.yml이 담당한다.
+# PR마다 각 서비스(var.services)의 고유 preview URL을 만든다. (가이드 §4.4)
+#   서비스 매트릭스 × (lint/typecheck/test/build → S3 업로드 → invalidation → PR 코멘트)
+# 서비스별 역할/배포 ID/도메인은 GitHub var DEPLOY_CONFIG(JSON)에서 가져온다(gh-setup.sh가 채움).
+# DEPLOY_CONFIG가 비어 있으면(부트스트랩 전) job은 자동 skip된다.
+# PR close 정리는 cleanup-preview.yml이 담당한다.
 
 on:
   pull_request:
@@ -10,34 +12,36 @@ on:
 
 permissions:
   contents: read
-  id-token: write # OIDC. 장기 AWS 키를 쓰지 않는다.
-  pull-requests: write # PR 코멘트
+  id-token: write
+  pull-requests: write
   deployments: write
 
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-env:
-  SERVICE_NAME: web
-  APP_DIR: apps/web
-  OUTPUT_DIR: apps/web/out
-
 jobs:
   deploy:
+    if: vars.DEPLOY_CONFIG != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(vars.SERVICES || '["web"]') }}
     runs-on: ubuntu-latest
     environment:
       name: preview
       url: ${{ steps.url.outputs.url }}
+    env:
+      SERVICE: ${{ matrix.service }}
+      APP_DIR: apps/${{ matrix.service }}
+      OUTPUT_DIR: apps/${{ matrix.service }}/out
+      PR: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v6
 
-      # corepack(pnpm)은 setup-node가 설치한 Node에서 활성화한다.
-      # (setup-node의 cache:pnpm은 pnpm이 PATH에 먼저 있어야 해서 corepack과 순서 충돌 → 사용 안 함)
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-
       - run: corepack enable
 
       - name: Install
@@ -54,36 +58,34 @@ jobs:
       - name: Test
         working-directory: ${{ env.APP_DIR }}
         run: pnpm test
-
       - name: Build (static export)
         working-directory: ${{ env.APP_DIR }}
         run: pnpm build
 
-      - name: Select runtime config + write deployment metadata
+      - name: Select runtime config + deployment metadata
         run: |
           cp "${APP_DIR}/public/env.preview.json" "${OUTPUT_DIR}/env.json"
           cat > "${OUTPUT_DIR}/deployment.json" <<EOF
           {
-            "service": "${SERVICE_NAME}",
+            "service": "${SERVICE}",
             "environment": "preview",
-            "pullRequest": ${{ github.event.pull_request.number }},
+            "pullRequest": ${PR},
             "sourceRevision": "${GITHUB_SHA}",
-            "ref": "${GITHUB_REF}",
             "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials (OIDC, preview role)
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          role-to-assume: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_role_arn }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Deploy to S3 (cache-control 분리)
-        run: ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}"
+        run: ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE}/pr-${PR}"
 
-      - name: Invalidate CloudFront (이 PR prefix만)
-        run: ./scripts/invalidate.sh "${{ vars.PREVIEW_DISTRIBUTION_ID }}" "/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}/*"
+      - name: Invalidate CloudFront (이 서비스/PR prefix만)
+        run: ./scripts/invalidate.sh "${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_distribution_id }}" "/${SERVICE}/pr-${PR}/*"
 
       # (선택) Pattern B — Amplify manual deploy. vars.AMPLIFY_APP_ID가 설정된 경우에만.
       - name: Amplify manual deployment (optional)
@@ -91,25 +93,15 @@ jobs:
         run: |
           aws amplify start-deployment \
             --app-id "${{ vars.AMPLIFY_APP_ID }}" \
-            --branch-name "pr-${{ github.event.pull_request.number }}" \
+            --branch-name "${SERVICE}-pr-${PR}" \
             --source-url-type BUCKET_PREFIX \
-            --source-url "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}/"
+            --source-url "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE}/pr-${PR}/"
 
       - name: Compute preview URL
         id: url
-        run: |
-          PR="${{ github.event.pull_request.number }}"
-          if [ -n "${{ vars.PREVIEW_BASE_DOMAIN }}" ]; then
-            echo "url=https://pr-${PR}.${{ vars.PREVIEW_BASE_DOMAIN }}/" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ vars.PREVIEW_CLOUDFRONT_DOMAIN }}" ]; then
-            echo "url=https://${{ vars.PREVIEW_CLOUDFRONT_DOMAIN }}/pr-${PR}/" >> "$GITHUB_OUTPUT"
-          else
-            echo "url=https://pr-${PR}.preview.example.com/" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "url=https://${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_cloudfront_domain }}/pr-${PR}/" >> "$GITHUB_OUTPUT"
 
-      # 실제 도메인이 설정된 경우에만 배포 URL 기준 smoke를 돌린다.
       - name: Wait for URL
-        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
         run: |
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.url.outputs.url }}" || true)
@@ -119,28 +111,28 @@ jobs:
           echo "URL not ready in time"; exit 1
 
       - name: Install Playwright browser
-        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Smoke test (deployed URL 기준)
-        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright test tests/smoke --project=chromium
         env:
           BASE_URL: ${{ steps.url.outputs.url }}
 
-      - name: Comment preview URL (upsert)
+      - name: Comment preview URL (upsert, 서비스별)
         uses: actions/github-script@v9
         env:
           PREVIEW_URL: ${{ steps.url.outputs.url }}
+          SERVICE: ${{ matrix.service }}
         with:
           script: |
-            const marker = '<!-- preview-bot -->';
+            const service = process.env.SERVICE;
+            const marker = `<!-- preview-bot-${service} -->`;
             const sha = context.sha.slice(0, 7);
             const body = [
               marker,
-              '## 🚀 Preview 배포 완료',
+              `## 🚀 \`${service}\` Preview 배포 완료`,
               '',
               '| 항목 | 값 |',
               '| --- | --- |',
@@ -156,16 +148,12 @@ jobs:
             const existing = comments.find((c) => c.body && c.body.includes(marker));
             if (existing) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
               });
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
               });
             }

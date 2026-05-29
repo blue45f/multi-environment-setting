@@ -1,8 +1,8 @@
 name: deploy
 
-# build-once, deploy-many. (가이드 §4.3)
+# build-once, deploy-many. (가이드 §4.3) 서비스(var.services)마다 매트릭스로 실행.
 #   build → deploy-staging → (production environment reviewer 승인) → deploy-production
-# 한 번 빌드한 동일 artifact를 staging과 production에 그대로 승격한다. 환경별 재빌드 없음.
+# 서비스별 역할/배포 ID/도메인은 GitHub var DEPLOY_CONFIG(JSON)에서 가져온다(gh-setup.sh가 채움).
 
 on:
   push:
@@ -22,19 +22,20 @@ permissions:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false # 배포는 중간 취소하지 않는다.
-
-env:
-  SERVICE_NAME: web
-  APP_DIR: apps/web
-  OUTPUT_DIR: apps/web/out
+  cancel-in-progress: false
 
 jobs:
-  # ── 1) 한 번만 빌드해서 GitHub artifact로 올린다 ──────────────────────────
+  # ── 1) 서비스별로 한 번만 빌드 → GitHub artifact ──────────────────────────
   build:
+    if: vars.DEPLOY_CONFIG != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(vars.SERVICES || '["web"]') }}
     runs-on: ubuntu-latest
-    outputs:
-      sha: ${{ github.sha }}
+    env:
+      APP_DIR: apps/${{ matrix.service }}
+      OUTPUT_DIR: apps/${{ matrix.service }}/out
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -56,16 +57,13 @@ jobs:
       - name: Build (static export)
         working-directory: ${{ env.APP_DIR }}
         run: pnpm build
-
       - name: Package artifact + checksum
         run: |
           tar -czf app.tar.gz -C "${OUTPUT_DIR}" .
           sha256sum app.tar.gz > app.tar.gz.sha256
-          cat app.tar.gz.sha256
-
       - uses: actions/upload-artifact@v7
         with:
-          name: frontend-${{ github.sha }}
+          name: frontend-${{ matrix.service }}-${{ github.sha }}
           path: |
             app.tar.gz
             app.tar.gz.sha256
@@ -74,114 +72,109 @@ jobs:
   # ── 2) staging 배포 ───────────────────────────────────────────────────────
   deploy-staging:
     needs: build
-    if: github.event_name == 'push' || inputs.target == 'staging'
+    if: ${{ vars.DEPLOY_CONFIG != '' && (github.event_name == 'push' || inputs.target == 'staging') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(vars.SERVICES || '["web"]') }}
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://${{ vars.STAGING_DOMAIN || 'staging.example.com' }}/
+      url: https://${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].staging_cloudfront_domain }}/
+    env:
+      SERVICE: ${{ matrix.service }}
+      APP_DIR: apps/${{ matrix.service }}
+      OUTPUT_DIR: apps/${{ matrix.service }}/out
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v8
         with:
-          name: frontend-${{ needs.build.outputs.sha }}
+          name: frontend-${{ matrix.service }}-${{ github.sha }}
       - name: Unpack + select runtime config
         run: |
-          echo "verify checksum"; sha256sum -c app.tar.gz.sha256
+          sha256sum -c app.tar.gz.sha256
           mkdir -p "${OUTPUT_DIR}"
           tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
           cp "${APP_DIR}/public/env.staging.json" "${OUTPUT_DIR}/env.json"
-
       - name: Configure AWS credentials (OIDC, staging role)
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_STAGING_ROLE_ARN }}
+          role-to-assume: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].staging_role_arn }}
           aws-region: ${{ vars.AWS_REGION }}
-
       - name: Upload immutable release + promote to current
         run: |
-          SHA="${{ needs.build.outputs.sha }}"
-          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/staging"
-          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${SHA}"
-          ./scripts/promote.sh "${BASE}/releases/${SHA}" "${BASE}/current"
-
+          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE}/staging"
+          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${GITHUB_SHA}"
+          ./scripts/promote.sh "${BASE}/releases/${GITHUB_SHA}" "${BASE}/current"
       - name: Invalidate CloudFront (entry/config만)
-        run: ./scripts/invalidate.sh "${{ vars.STAGING_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
-
-      # smoke를 위해 node/pnpm/deps를 준비한다 (이 job은 배포만 하므로 별도 셋업 필요).
+        run: ./scripts/invalidate.sh "${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].staging_distribution_id }}" "/index.html" "/env.json" "/deployment.json"
       - uses: actions/setup-node@v6
-        if: vars.STAGING_DOMAIN != ''
         with:
           node-version-file: .nvmrc
-      - if: vars.STAGING_DOMAIN != ''
-        run: corepack enable
+      - run: corepack enable
       - name: Install app deps (smoke)
-        if: vars.STAGING_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm install --frozen-lockfile
       - name: Install Playwright browser
-        if: vars.STAGING_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright install --with-deps chromium
       - name: Smoke test
-        if: vars.STAGING_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright test tests/smoke --project=chromium
         env:
-          BASE_URL: https://${{ vars.STAGING_DOMAIN }}/
+          BASE_URL: https://${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].staging_cloudfront_domain }}/
 
   # ── 3) production 배포 (environment reviewer 승인 후) ──────────────────────
   deploy-production:
     needs: [build, deploy-staging]
-    if: github.event_name == 'push' || inputs.target == 'production'
+    if: ${{ vars.DEPLOY_CONFIG != '' && (github.event_name == 'push' || inputs.target == 'production') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(vars.SERVICES || '["web"]') }}
     runs-on: ubuntu-latest
     environment:
       name: production # ← Settings에서 required reviewers를 걸면 이 지점에서 승인 대기
-      url: https://${{ vars.PRODUCTION_DOMAIN || 'www.example.com' }}/
+      url: https://${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].production_cloudfront_domain }}/
+    env:
+      SERVICE: ${{ matrix.service }}
+      APP_DIR: apps/${{ matrix.service }}
+      OUTPUT_DIR: apps/${{ matrix.service }}/out
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v8
         with:
-          name: frontend-${{ needs.build.outputs.sha }}
+          name: frontend-${{ matrix.service }}-${{ github.sha }}
       - name: Unpack + select runtime config
         run: |
           sha256sum -c app.tar.gz.sha256
           mkdir -p "${OUTPUT_DIR}"
           tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
           cp "${APP_DIR}/public/env.production.json" "${OUTPUT_DIR}/env.json"
-
       - name: Configure AWS credentials (OIDC, production role)
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_PRODUCTION_ROLE_ARN }}
+          role-to-assume: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].production_role_arn }}
           aws-region: ${{ vars.AWS_REGION }}
-
       - name: Upload immutable release + promote to current
         run: |
-          SHA="${{ needs.build.outputs.sha }}"
-          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/production"
-          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${SHA}"
-          ./scripts/promote.sh "${BASE}/releases/${SHA}" "${BASE}/current"
-
+          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE}/production"
+          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${GITHUB_SHA}"
+          ./scripts/promote.sh "${BASE}/releases/${GITHUB_SHA}" "${BASE}/current"
       - name: Invalidate CloudFront (entry/config만)
-        run: ./scripts/invalidate.sh "${{ vars.PRODUCTION_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
-
+        run: ./scripts/invalidate.sh "${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].production_distribution_id }}" "/index.html" "/env.json" "/deployment.json"
       - uses: actions/setup-node@v6
-        if: vars.PRODUCTION_DOMAIN != ''
         with:
           node-version-file: .nvmrc
-      - if: vars.PRODUCTION_DOMAIN != ''
-        run: corepack enable
+      - run: corepack enable
       - name: Install app deps (smoke)
-        if: vars.PRODUCTION_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm install --frozen-lockfile
       - name: Install Playwright browser
-        if: vars.PRODUCTION_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright install --with-deps chromium
       - name: Smoke test
-        if: vars.PRODUCTION_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
         run: pnpm exec playwright test tests/smoke --project=chromium
         env:
-          BASE_URL: https://${{ vars.PRODUCTION_DOMAIN }}/
+          BASE_URL: https://${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].production_cloudfront_domain }}/
