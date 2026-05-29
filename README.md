@@ -58,6 +58,7 @@ multi-environment-setting/
 │   ├── preflight.sh              # 사전 조건(도구/인증/tfvars) 점검
 │   ├── bootstrap.sh              # 원커맨드 구축 (preflight → apply → gh-setup)
 │   ├── gh-setup.sh               # terraform output → GitHub 변수/환경 자동 설정
+│   ├── tf-backend.sh             # (선택) 원격 state S3+DynamoDB 생성
 │   ├── dev.sh                    # 로컬 멀티환경 미리보기 (env 선택)
 │   ├── deploy-s3.sh              # cache-control 분리 S3 업로드
 │   ├── invalidate.sh             # CloudFront invalidation (entry/config만)

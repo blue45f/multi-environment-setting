@@ -1,0 +1,7 @@
+# `make tf-backend`가 실제 값으로 backend.hcl을 생성합니다(이 파일은 형식 예시).
+# 사용: terraform init -backend-config=backend.hcl -migrate-state
+bucket         = "web-tfstate-123456789012-ap-northeast-2"
+key            = "web/terraform.tfstate"
+region         = "ap-northeast-2"
+dynamodb_table = "web-tflocks"
+encrypt        = true

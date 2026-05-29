@@ -29,6 +29,8 @@ crash.log
 # 실제 값이 담기는 tfvars는 커밋하지 않는다 (.example만 커밋)
 terraform.tfvars
 *.auto.tfvars
+# tf-backend.sh가 생성하는 원격 state 설정 (backend.hcl.example만 커밋)
+infra/terraform/backend.hcl
 
 # aws / local artifacts
 *.tar.gz

@@ -116,6 +116,18 @@ hosted_zone_id       = "Z0123456789ABCDEFGHIJ"   # apex_domain의 Route53 zone I
 
 > CloudFront용 ACM 인증서는 요구사항에 따라 자동으로 **us-east-1**에 생성됩니다(코드가 provider alias로 처리). hosted zone은 미리 존재해야 합니다.
 
+### 2.5 (팀/운영, 선택) 원격 state
+
+기본은 로컬 state라 혼자 쓰기엔 충분하지만, **여러 명이 같은 환경을 공유·반복 구축**하려면 원격 state(S3 + DynamoDB lock)를 권장합니다.
+
+```bash
+make tf-backend     # state 버킷 + 락 테이블 생성 + infra/terraform/backend.hcl 작성 (멱등)
+# versions.tf 의 'backend "s3" {}' 주석 해제 후:
+terraform -chdir=infra/terraform init -backend-config=backend.hcl -migrate-state
+```
+
+`backend.hcl`은 환경별 값이라 gitignore되며, 형식은 `backend.hcl.example`을 참고하세요. 이미 `terraform apply`로 만든 로컬 state가 있으면 `-migrate-state`가 원격으로 옮겨줍니다.
+
 ---
 
 ## 3. GitHub 설정

@@ -7,8 +7,8 @@ TF_DIR := infra/terraform
 ENV ?= preview
 
 .DEFAULT_GOAL := help
-.PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output gh-setup \
-        app-install app-dev app-build app-test app-smoke rollback destroy
+.PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output tf-backend gh-setup \
+        app-install app-dev app-build app-test rollback destroy
 
 help: ## 명령 목록
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
@@ -30,6 +30,9 @@ tf-apply: ## terraform apply
 
 tf-output: ## terraform output (GitHub 변수 값)
 	terraform -chdir=$(TF_DIR) output
+
+tf-backend: ## (팀/운영) 원격 state S3+DynamoDB 생성 + backend.hcl 작성
+	@./scripts/tf-backend.sh
 
 gh-setup: ## terraform output → GitHub variables + environments (PROD_REVIEWER=<login> 선택)
 	@./scripts/gh-setup.sh

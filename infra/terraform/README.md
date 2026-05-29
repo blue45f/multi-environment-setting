@@ -47,6 +47,6 @@ terraform output -raw gh_variable_commands      # gh CLI 명령 모음
 
 - **OIDC provider는 계정당 1개**만 존재할 수 있습니다. 이미 있으면 `create_oidc_provider = false` 후 한 번 import (자세히는 [SETUP §2.1](../../docs/SETUP.md#21-tfvars-작성--infraterraformterraformtfvars)).
 - CloudFront/ACM 변경은 전파에 수 분이 걸릴 수 있습니다.
-- state에는 민감 정보가 포함될 수 있으니 운영에서는 원격 backend(S3+DynamoDB lock)를 사용하세요(`versions.tf` 주석 참고).
+- state에는 민감 정보가 포함될 수 있으니 팀/운영에서는 원격 backend를 사용하세요: `make tf-backend` → `versions.tf`의 `backend "s3" {}` 주석 해제 → `terraform init -backend-config=backend.hcl -migrate-state` (SETUP §2.5).
 
 자세한 구축 순서와 "어디를 수정하나"는 [docs/SETUP.md](../../docs/SETUP.md)를 보세요.

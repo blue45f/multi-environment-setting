@@ -8,12 +8,9 @@ terraform {
     }
   }
 
-  # 운영 환경에서는 원격 state backend를 권장한다. 예시:
-  # backend "s3" {
-  #   bucket         = "web-terraform-state-123456789012"
-  #   key            = "multi-environment/terraform.tfstate"
-  #   region         = "ap-northeast-2"
-  #   dynamodb_table = "terraform-locks"
-  #   encrypt        = true
-  # }
+  # 팀/운영: 원격 state(S3 + DynamoDB lock)를 권장한다(기본은 로컬 state).
+  # 활성화: `make tf-backend` 로 버킷/락 테이블 생성 + backend.hcl 작성 후,
+  #         아래 빈 블록 주석을 해제하고
+  #         `terraform init -backend-config=backend.hcl -migrate-state` 실행.
+  # backend "s3" {}
 }
