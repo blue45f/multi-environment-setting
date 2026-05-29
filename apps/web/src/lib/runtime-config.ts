@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { runtimeConfigSchema, type RuntimeConfig } from '../../env.schema';
 
-// /env.json 을 런타임에 한 번만 불러와 검증하고 캐시한다.
-// 정적 export 환경에서도 동작하도록 클라이언트에서 fetch 한다.
 let cached: Promise<RuntimeConfig> | null = null;
 
 export function loadRuntimeConfig(): Promise<RuntimeConfig> {

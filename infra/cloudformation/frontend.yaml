@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Static frontend hosting baseline equivalent to the Terraform stack.
+
+Parameters:
+  ServiceName:
+    Type: String
+    Default: web
+  ArtifactBucketName:
+    Type: String
+    Description: Globally unique S3 bucket name for frontend artifacts.
+  PreviewExpirationDays:
+    Type: Number
+    Default: 14
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ArtifactBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-preview
+            Status: Enabled
+            Prefix: !Sub '${ServiceName}/pr-'
+            ExpirationInDays: !Ref PreviewExpirationDays
+
+  PreviewOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${ServiceName}-preview-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  PreviewDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${ServiceName} preview static hosting'
+        DefaultRootObject: index.html
+        Origins:
+          - Id: artifacts
+            DomainName: !GetAtt ArtifactBucket.RegionalDomainName
+            OriginAccessControlId: !Ref PreviewOriginAccessControl
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: artifacts
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+
+Outputs:
+  ArtifactBucket:
+    Value: !Ref ArtifactBucket
+  PreviewDistributionId:
+    Value: !Ref PreviewDistribution
+  PreviewCloudFrontDomain:
+    Value: !GetAtt PreviewDistribution.DomainName

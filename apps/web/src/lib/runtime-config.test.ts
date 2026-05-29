@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { runtimeConfigSchema } from '../../env.schema';
+import { RuntimeConfigSchema } from '../../env.schema';
 
 // 단위 테스트(pnpm test → vitest). 배포 게이트의 일부이므로 가볍고 빠르게 유지한다.
-describe('runtimeConfigSchema', () => {
+describe('RuntimeConfigSchema', () => {
   it('정상 config를 통과시킨다', () => {
     const ok = {
       stage: 'preview',
@@ -10,7 +10,17 @@ describe('runtimeConfigSchema', () => {
       sentryEnvironment: 'preview',
       featureFlagClientKey: 'public-preview-key',
     };
-    expect(() => runtimeConfigSchema.parse(ok)).not.toThrow();
+    expect(() => RuntimeConfigSchema.parse(ok)).not.toThrow();
+  });
+
+  it('production config를 통과시킨다', () => {
+    const ok = {
+      stage: 'production',
+      apiBaseUrl: 'https://api.example.com',
+      sentryEnvironment: 'production',
+      featureFlagClientKey: 'public-prod-key',
+    };
+    expect(() => RuntimeConfigSchema.parse(ok)).not.toThrow();
   });
 
   it('apiBaseUrl이 URL이 아니면 거부한다', () => {
@@ -20,7 +30,7 @@ describe('runtimeConfigSchema', () => {
       sentryEnvironment: 'preview',
       featureFlagClientKey: 'public-preview-key',
     };
-    expect(() => runtimeConfigSchema.parse(bad)).toThrow();
+    expect(() => RuntimeConfigSchema.parse(bad)).toThrow();
   });
 
   it('알 수 없는 stage를 거부한다', () => {
@@ -30,6 +40,6 @@ describe('runtimeConfigSchema', () => {
       sentryEnvironment: 'qa',
       featureFlagClientKey: 'k',
     };
-    expect(() => runtimeConfigSchema.parse(bad)).toThrow();
+    expect(() => RuntimeConfigSchema.parse(bad)).toThrow();
   });
 });

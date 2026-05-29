@@ -12,7 +12,15 @@ export default function Home() {
   const { config, error } = useRuntimeConfig();
 
   return (
-    <main style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <main
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
       <section
         style={{
           width: 'min(560px, 92vw)',
@@ -25,7 +33,8 @@ export default function Home() {
       >
         <h1 style={{ margin: '0 0 8px', fontSize: 24 }}>Multi-Environment Demo</h1>
         <p style={{ margin: '0 0 24px', color: '#9fb0e0' }}>
-          이 페이지는 런타임에 <code>/env.json</code>을 읽어 현재 환경을 표시합니다. (build-once, deploy-many)
+          이 페이지는 런타임에 <code>/env.json</code>을 읽어 현재 환경을 표시합니다. (build-once,
+          deploy-many)
         </p>
 
         {error && (
@@ -48,17 +57,17 @@ export default function Home() {
                 color: '#0b1020',
               }}
             >
-              {config?.stage ?? 'loading…'}
+              {config?.stage ?? 'loading...'}
             </span>
           </dd>
 
           <dt style={{ color: '#9fb0e0' }}>apiBaseUrl</dt>
           <dd data-testid="api" style={{ margin: 0, wordBreak: 'break-all' }}>
-            {config?.apiBaseUrl ?? '—'}
+            {config?.apiBaseUrl ?? '-'}
           </dd>
 
           <dt style={{ color: '#9fb0e0' }}>sentry</dt>
-          <dd style={{ margin: 0 }}>{config?.sentryEnvironment ?? '—'}</dd>
+          <dd style={{ margin: 0 }}>{config?.sentryEnvironment ?? '-'}</dd>
         </dl>
       </section>
     </main>

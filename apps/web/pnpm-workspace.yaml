@@ -1,0 +1,10 @@
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - eslint-module-utils@2.13.0
+  - hasown@2.0.4
+  - typed-array-length@1.0.8
