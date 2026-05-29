@@ -177,26 +177,31 @@ OIDC를 쓰므로 **장기 AWS 키 secret은 없습니다.** 아래는 모두 *v
 
 ---
 
-## 6. 빠른 시작
+## 6. 빠른 시작 (5분, 원커맨드)
 
-상세 단계는 [`docs/SETUP.md`](docs/SETUP.md). 요약:
+전제: `terraform`·`aws`·`gh`·`node`가 설치돼 있고 AWS/GitHub 로그인 완료. 상세는 [`docs/SETUP.md`](docs/SETUP.md).
 
 ```bash
-# 1) 인프라 프로비저닝
-cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars   # 값 채우기 (gitignore됨)
-terraform init
-terraform apply
-terraform output                                # GitHub variables에 넣을 값 확인
+# 0) 값 1개 파일만 채운다
+cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
+#   github_owner / github_repo 입력 (도메인 없이 시작하려면 enable_custom_domain=false 유지)
 
-# 2) GitHub repo variables/environments 설정 (위 §5 표)
+# 1) 원커맨드 구축: 사전점검 → terraform apply → GitHub 변수/환경 자동 설정
+make bootstrap
+#   (production 리뷰어까지 지정하려면)  PROD_REVIEWER=<github-login> make gh-setup
 
-# 3) 예제 앱 의존성 설치 + 로컬 확인
-cd ../../apps/web
-pnpm install                                     # pnpm-lock.yaml 생성 → 커밋
-pnpm build                                        # out/ 생성 확인
+# 2) 끝. PR을 열면 preview가 자동 배포되고 PR에 URL이 코멘트됩니다.
+```
 
-# 4) PR을 열면 preview.yml이 자동으로 동작 → PR 코멘트에 preview URL
+수동/개별 단계가 필요하면:
+
+```bash
+make preflight        # 사전 조건 점검
+make tf-plan          # 생성될 리소스 검토
+make tf-apply         # 인프라 생성
+make gh-setup         # terraform output → GitHub 변수/환경
+make app-dev ENV=staging   # 로컬에서 환경별 미리보기
+make help             # 전체 명령
 ```
 
 ---
