@@ -88,15 +88,30 @@ s3://<ARTIFACT_BUCKET>/
 
 ---
 
-## 7. 환경 추가하기 (예: `qa`)
+## 7. 멀티 서비스 (여러 프론트엔드 앱)
 
-새 환경을 붙이려면 아래를 **함께** 추가합니다.
+한 저장소가 여러 서비스(`var.services`, 예: `web`, `admin`)를 운영할 수 있습니다. 서비스마다 아래가 분리됩니다.
 
-1. `infra/terraform`에 distribution + (필요 시) OIDC role을 추가하고, OIDC trust의 `sub`에 `:environment:qa`를 넣습니다.
-2. GitHub `Settings → Environments`에 `qa`를 만듭니다(이름이 trust claim과 일치해야 함).
-3. `apps/web/public/env.qa.json`을 추가하고 `env.schema.ts`의 `stage` enum에 `'qa'`를 더합니다.
-4. 워크플로(`deploy.yml`)에 `deploy-qa` job을 추가하고, 해당 role ARN/distribution ID 변수를 GitHub에 설정합니다.
-5. (도메인 사용 시) Route53 레코드 + ACM SAN에 `qa.example.com`을 추가합니다.
+| 분리 단위 | 규칙 |
+| :--- | :--- |
+| S3 prefix | `<service>/pr-<n>`, `<service>/<env>/{releases,current}` |
+| OIDC 역할 | `<service>-gha-{preview,staging,production,cleanup}` |
+| CloudFront 배포 | 서비스별 preview/staging/production 3종 |
+| preview 라우팅 | 서비스명이 주입된 CloudFront Function(`preview-router.js.tftpl`) |
+| GitHub 변수 | 공유 `AWS_REGION`·`ARTIFACT_BUCKET` + `SERVICES`(JSON 배열) + `DEPLOY_CONFIG`(service→설정 JSON 맵) |
+
+- 워크플로(preview/deploy/cleanup)는 `SERVICES`를 **매트릭스**로 돌아 서비스마다 실행합니다. 추가 워크플로 불필요.
+- **custom 도메인은 primary 서비스(`services[0]`)에만** 적용되고, 나머지는 CloudFront 기본 도메인을 씁니다.
+- 앱 추가: `make new-service NAME=<name>` → `terraform.tfvars`의 `services`에 추가 → `make tf-apply && make gh-setup`. (자세히: [SETUP §4.5](SETUP.md))
+
+### 새 환경 tier(예: `qa`)를 추가하려면
+
+preview/staging/production 3-tier는 고정입니다. `qa` 같은 **새 tier**는 더 깊은 변경이 필요합니다(서비스 추가보다 큼):
+
+1. `cloudfront.tf`에 `qa` distribution(서비스별 for_each) + `github-oidc.tf`에 `qa` 역할/trust(`:environment:qa`) 추가.
+2. GitHub `Settings → Environments`에 `qa` 생성 + `deploy.yml`에 `deploy-qa` job 추가.
+3. `apps/<svc>/public/env.qa.json` 추가 + `env.schema.ts`의 `stage` enum에 `'qa'`.
+4. `deploy_config` 출력과 gh-setup에 qa 값 반영.
 
 ---
 

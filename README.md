@@ -88,7 +88,8 @@ multi-environment-setting/
 
 | 플레이스홀더 | 예시 값 | 의미 | 바꾸는 위치 |
 | :--- | :--- | :--- | :--- |
-| `SERVICE_NAME` | `web` | 서비스/앱 이름 | `infra/terraform/variables.tf`, 워크플로 `env` |
+| `service_name` | `web` | 프로젝트 이름(공유 버킷 prefix) | `terraform.tfvars` |
+| `services` | `["web"]` | 운영할 프론트엔드 앱 목록(멀티 서비스) | `terraform.tfvars` — 앱 생성은 `make new-service NAME=<name>` |
 | AWS account id | `123456789012` | AWS 계정 ID | Terraform가 자동 조회 (`aws_caller_identity`) |
 | AWS region | `ap-northeast-2` | 배포 리전(서울) | `variables.tf`, GitHub `vars.AWS_REGION` |
 | `OWNER/REPO` | `blue45f/heejun` | GitHub 저장소 | `variables.tf`(OIDC sub) |
