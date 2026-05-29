@@ -55,10 +55,17 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: corepack enable
-      - working-directory: apps/web
+      # apps/* 의 모든 서비스를 검증한다 (새 서비스 추가 시 자동 포함).
+      - name: Validate all services
         run: |
-          pnpm install --frozen-lockfile
-          pnpm lint
-          pnpm typecheck
-          pnpm test
-          pnpm build
+          for d in apps/*/; do
+            [ -f "${d}package.json" ] || continue
+            echo "::group::${d}"
+            ( cd "${d}" \
+              && pnpm install --frozen-lockfile \
+              && pnpm lint \
+              && pnpm typecheck \
+              && pnpm test \
+              && pnpm build )
+            echo "::endgroup::"
+          done
