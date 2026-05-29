@@ -153,8 +153,10 @@ OIDC를 쓰므로 **장기 AWS 키 secret은 없습니다.** 아래는 모두 *v
 | `PREVIEW_DISTRIBUTION_ID` | `E1AAAAAAAAAAAA` | `terraform output preview_distribution_id` |
 | `STAGING_DISTRIBUTION_ID` | `E2BBBBBBBBBBBB` | `terraform output staging_distribution_id` |
 | `PRODUCTION_DISTRIBUTION_ID` | `E3CCCCCCCCCCCC` | `terraform output production_distribution_id` |
-| `PREVIEW_BASE_DOMAIN` | `preview.example.com` | 직접 설정 |
-| `PRODUCTION_DOMAIN` | `www.example.com` | 직접 설정 |
+| `PREVIEW_BASE_DOMAIN` | `preview.example.com` | 직접 설정 (custom 도메인 시) |
+| `PREVIEW_CLOUDFRONT_DOMAIN` | `d111.cloudfront.net` | (선택) 도메인 없이 테스트 시 path 기반 preview URL용 |
+| `STAGING_DOMAIN` | `staging.example.com` | (선택) staging smoke용 — 비우면 smoke skip |
+| `PRODUCTION_DOMAIN` | `www.example.com` | (선택) production smoke용 — 비우면 smoke skip |
 | `AMPLIFY_APP_ID` | (비워둠) | Pattern B를 쓸 때만 |
 
 ### Environments (`Settings → Environments`)
