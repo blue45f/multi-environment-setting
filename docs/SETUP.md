@@ -200,13 +200,18 @@ gh variable set PREVIEW_CLOUDFRONT_DOMAIN \
 ### 4.2 로컬 확인
 
 ```bash
+# 저장소 루트에서 (권장)
+make app-dev   ENV=preview   # 개발 서버 (env.json 자동 선택) → http://localhost:3000
+make e2e-local ENV=staging   # build → out/ 정적 서빙 → Playwright smoke (AWS 불필요)
+
+# 또는 앱 디렉터리에서 직접
 cd apps/web
 corepack enable
 pnpm install                # 락파일 커밋되어 있음
-cp public/env.preview.json public/env.json   # 로컬에서 런타임 config 확인용
-pnpm dev                    # http://localhost:3000
 pnpm build                  # out/ 생성 확인 (static export)
 ```
+
+> **AWS 계정이 아직 없어도** 여기까지(빌드·런타임 config·smoke)는 전부 로컬에서 검증됩니다. 실제 인프라(`make bootstrap`)는 계정이 준비된 뒤 실행하세요.
 
 ---
 

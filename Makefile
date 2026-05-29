@@ -8,10 +8,10 @@ ENV ?= preview
 
 .DEFAULT_GOAL := help
 .PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output tf-backend gh-setup \
-        app-install app-dev app-build app-test rollback destroy
+        app-install app-dev app-build app-test e2e-local rollback destroy
 
 help: ## 명령 목록
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
 
 preflight: ## 사전 조건(도구/인증/tfvars) 점검
 	@./scripts/preflight.sh
@@ -48,6 +48,9 @@ app-build: ## 앱 빌드 (static export → out/)
 
 app-test: ## lint + typecheck + unit test
 	cd $(APP_DIR) && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
+
+e2e-local: ## AWS 없이 로컬 E2E (build+serve+smoke) — ENV=preview|staging|production
+	@./scripts/e2e-local.sh $(ENV)
 
 rollback: ## 롤백 — ENV=production SHA=<sha> DIST=<distribution_id>
 	ARTIFACT_BUCKET=$$(terraform -chdir=$(TF_DIR) output -raw artifact_bucket) \

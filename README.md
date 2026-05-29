@@ -60,6 +60,7 @@ multi-environment-setting/
 │   ├── gh-setup.sh               # terraform output → GitHub 변수/환경 자동 설정
 │   ├── tf-backend.sh             # (선택) 원격 state S3+DynamoDB 생성
 │   ├── dev.sh                    # 로컬 멀티환경 미리보기 (env 선택)
+│   ├── e2e-local.sh              # AWS 없이 로컬 E2E (build+serve+smoke)
 │   ├── deploy-s3.sh              # cache-control 분리 S3 업로드
 │   ├── invalidate.sh             # CloudFront invalidation (entry/config만)
 │   ├── promote.sh                # releases/<sha> → current 포인터 전환
@@ -205,6 +206,17 @@ make gh-setup         # terraform output → GitHub 변수/환경
 make app-dev ENV=staging   # 로컬에서 환경별 미리보기
 make help             # 전체 명령
 ```
+
+### AWS 계정이 아직 없다면 (로컬에서 먼저 확인)
+
+인프라 없이도 멀티환경 동작(빌드 → 정적 서빙 → 런타임 `env.json` 적용 → smoke)을 로컬에서 그대로 검증할 수 있습니다.
+
+```bash
+make app-dev   ENV=preview      # 개발 서버로 환경별 미리보기
+make e2e-local ENV=staging      # build → out/ 정적 서빙 → Playwright smoke (AWS 불필요)
+```
+
+`make bootstrap`(실제 AWS 생성)은 계정이 준비되면 그때 실행하면 됩니다. CI의 `validate.yml`도 AWS 없이 통과합니다.
 
 ---
 
