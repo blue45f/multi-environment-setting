@@ -45,6 +45,20 @@
 
 ---
 
+## 1.5 빠른 경로 (원커맨드)
+
+위 표 #1~#2(`github_owner`/`github_repo`)만 `terraform.tfvars`에 채우면, 나머지(terraform apply → GitHub 변수 → environments)는 한 번에 끝납니다.
+
+```bash
+cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars   # 값 입력
+make bootstrap                          # preflight → terraform apply → gh-setup
+PROD_REVIEWER=<github-login> make gh-setup   # (선택) production 필수 리뷰어까지
+```
+
+내부적으로 `scripts/preflight.sh`(사전 점검) → `terraform apply` → `scripts/gh-setup.sh`(터미널에서 `terraform output`을 읽어 `gh variable set` + environments 생성)를 수행합니다. 아래 §2~§3은 이 과정을 수동으로 풀어 쓴 것이며, 무엇이 일어나는지 이해하거나 단계별로 진행할 때 참고합니다.
+
+---
+
 ## 2. 인프라 프로비저닝 (Terraform)
 
 ### 2.1 tfvars 작성 — `infra/terraform/terraform.tfvars`
