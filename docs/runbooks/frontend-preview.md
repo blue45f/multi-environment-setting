@@ -43,7 +43,7 @@ flowchart TD
 | **asset 403** | ① S3 prefix에 파일이 있는지 ② S3 버킷 정책이 CloudFront OAC(`AWS:SourceArn`)를 허용하는지 ③ 업로드 root 경로 |
 | **API CORS 실패** | ① `env.json`의 `apiBaseUrl` ② API 서버의 allowed origin에 preview 서브도메인 패턴이 있는지 ③ cookie credential 조합 |
 
-> preview 라우팅 원리: `preview-router.js`(CloudFront Function)가 `pr-<n>.preview.example.com`(또는 `<cf-domain>/pr-<n>/`)을 S3 `/web/pr-<n>/`로 재작성합니다. viewer-request는 캐시 조회 **이전**에 실행되므로, invalidation 경로도 재작성된 `"/web/pr-<n>/*"`를 써야 합니다.
+> preview 라우팅 원리: 서비스별 CloudFront Function(`preview-router.js.tftpl`, 서비스명 주입)이 `pr-<n>.preview.example.com`(또는 `<cf-domain>/pr-<n>/`)을 S3 `/<service>/pr-<n>/`로 재작성합니다. viewer-request는 캐시 조회 **이전**에 실행되므로, invalidation 경로도 재작성된 `"/<service>/pr-<n>/*"`를 써야 합니다.
 
 ---
 
@@ -52,13 +52,17 @@ flowchart TD
 `current` 포인터를 이전 불변 release(`releases/<sha>`)로 되돌립니다. **S3→S3 sync는 cache-control 메타데이터를 보존**하므로 캐시 정책이 유지됩니다.
 
 ```bash
-# 1) 되돌릴 좋은 release(sha)를 찾는다
-aws s3 ls "s3://<ARTIFACT_BUCKET>/web/production/releases/"
+# 1) 되돌릴 좋은 release(sha)를 찾는다 (<service>는 서비스명, 단일 구성이면 web)
+aws s3 ls "s3://<ARTIFACT_BUCKET>/<service>/production/releases/"
 
-# 2) 롤백 — 시그니처: rollback.sh <staging|production> <release_sha> [distribution_id]
-#    ARTIFACT_BUCKET 은 env로 전달 (SERVICE_NAME 기본 web)
-ARTIFACT_BUCKET=<ARTIFACT_BUCKET> \
+# 2) 그 서비스의 production distribution id 확인 (terraform output 또는 GitHub DEPLOY_CONFIG)
+terraform -chdir=infra/terraform output -json production_distribution_ids   # {"web":"E3C…", "admin":"E9…"}
+
+# 3) 롤백 — 시그니처: rollback.sh <staging|production> <release_sha> [distribution_id]
+#    멀티 서비스: ARTIFACT_BUCKET + SERVICE_NAME 을 env로 전달
+ARTIFACT_BUCKET=<ARTIFACT_BUCKET> SERVICE_NAME=<service> \
   ./scripts/rollback.sh production <good-sha> <PRODUCTION_DISTRIBUTION_ID>
+#   또는 한 줄로: make rollback SERVICE=<service> ENV=production SHA=<good-sha> DIST=<id>
 ```
 
 `distribution_id`를 주면 `/index.html`·`/env.json`·`/deployment.json`을 자동 invalidate합니다. 생략하면 수동 invalidation이 필요합니다.
@@ -79,13 +83,15 @@ ARTIFACT_BUCKET=<ARTIFACT_BUCKET> \
 ```bash
 # 수동 dry-run(후보만 출력) — GitHub UI: Actions → cleanup-preview → Run workflow (dry_run=true)
 # 로컬에서:
-ARTIFACT_BUCKET=<bucket> GH_TOKEN=<token> GH_REPO=<owner/repo> DRY_RUN=true \
+ARTIFACT_BUCKET=<bucket> SERVICE_NAME=<service> GH_TOKEN=<token> GH_REPO=<owner/repo> DRY_RUN=true \
   ./scripts/cleanup-preview.sh sweep
 ```
 
+> 멀티 서비스에서는 워크플로가 `SERVICES` 매트릭스로 서비스마다 sweep합니다. 로컬 수동 실행 시 `SERVICE_NAME`을 서비스별로 지정하세요(기본 web).
+
 안전 가드(`scripts/cleanup-preview.sh`):
 
-- prefix가 정확히 `web/pr-<숫자>/` 패턴이어야 삭제(상위 경로 보호).
+- prefix가 정확히 `<service>/pr-<숫자>/` 패턴이어야 삭제(상위 경로 보호).
 - **open PR은 절대 삭제하지 않음.**
 - closed 후 `GRACE_DAYS`(기본 3일)가 지나야 삭제.
 - 1회 실행당 `MAX_DELETIONS`(기본 20) 한도 — 버그 시 폭발적 삭제 방지.
