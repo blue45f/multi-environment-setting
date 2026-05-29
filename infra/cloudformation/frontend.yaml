@@ -1,18 +1,63 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Static frontend hosting baseline equivalent to the Terraform stack.
+Description: >-
+  다중 개발 서버 — Terraform 스택(infra/terraform)의 CloudFormation 동등본.
+  S3 artifact 버킷 + OAC 버킷 정책 + CloudFront 배포 3개(preview/staging/production)
+  + preview 라우팅 Function + GitHub OIDC provider/역할 4개.
+  ※ 주(主) IaC는 Terraform입니다. CF를 선호할 때 이 템플릿을 사용하세요.
+  ※ CloudFront용 ACM 인증서는 반드시 us-east-1에 있어야 하므로, custom 도메인을 쓸 때는
+     us-east-1에서 미리 만든 인증서 ARN을 AcmCertificateArn 파라미터로 전달합니다.
 
 Parameters:
   ServiceName:
     Type: String
     Default: web
+  GitHubOwner:
+    Type: String
+    Description: 'GitHub 조직/사용자 (예: blue45f)'
+  GitHubRepo:
+    Type: String
+    Description: 'GitHub 저장소 이름 (예: heejun)'
   ArtifactBucketName:
     Type: String
-    Description: Globally unique S3 bucket name for frontend artifacts.
+    Description: 전역 유일한 S3 버킷 이름 (예 web-frontend-artifacts-<account>-<region>)
+  CreateOidcProvider:
+    Type: String
+    AllowedValues: ['Yes', 'No']
+    Default: 'Yes'
+    Description: 계정에 GitHub OIDC provider가 없으면 Yes. 이미 있으면 No.
   PreviewExpirationDays:
     Type: Number
     Default: 14
+  ReleaseExpirationDays:
+    Type: Number
+    Default: 90
+  EnableCustomDomain:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  ApexDomain:
+    Type: String
+    Default: example.com
+  PreviewSubdomain:
+    Type: String
+    Default: preview
+  StagingHost:
+    Type: String
+    Default: staging.example.com
+  ProductionHost:
+    Type: String
+    Default: www.example.com
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: (custom 도메인 시) us-east-1의 ACM 인증서 ARN. 도메인 미사용 시 비워둠.
+
+Conditions:
+  HasCustomDomain: !Equals [!Ref EnableCustomDomain, 'true']
+  CreateOidc: !Equals [!Ref CreateOidcProvider, 'Yes']
 
 Resources:
+  # ── S3 artifact 버킷 ───────────────────────────────────────────────────────
   ArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -28,47 +73,420 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+            BucketKeyEnabled: true
       LifecycleConfiguration:
         Rules:
           - Id: expire-preview
             Status: Enabled
             Prefix: !Sub '${ServiceName}/pr-'
             ExpirationInDays: !Ref PreviewExpirationDays
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+          - Id: expire-staging-releases
+            Status: Enabled
+            Prefix: !Sub '${ServiceName}/staging/releases/'
+            ExpirationInDays: !Ref ReleaseExpirationDays
+          - Id: expire-production-releases
+            Status: Enabled
+            Prefix: !Sub '${ServiceName}/production/releases/'
+            ExpirationInDays: !Ref ReleaseExpirationDays
+          - Id: abort-incomplete-multipart
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
 
-  PreviewOriginAccessControl:
+  # CloudFront OAC를 통해 들어오는 3개 배포만 GetObject 허용
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontReadViaOAC
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${ArtifactBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn':
+                  - !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${PreviewDistribution}'
+                  - !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${StagingDistribution}'
+                  - !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ProductionDistribution}'
+
+  # ── CloudFront 공통 ────────────────────────────────────────────────────────
+  OriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: !Sub '${ServiceName}-preview-oac'
+        Name: !Sub '${ServiceName}-s3-oac'
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
 
+  PreviewRouterFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${ServiceName}-preview-router'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Route pr-<n> host/path to S3 prefix web/pr-<n>/ with SPA fallback
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var host = (request.headers.host && request.headers.host.value) || '';
+          var label = host.split('.')[0];
+          if (label.indexOf('pr-') !== 0) {
+            var seg = request.uri.split('/');
+            if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
+              label = seg[1];
+              var rest = seg.slice(2).join('/');
+              request.uri = rest === '' ? '/' : '/' + rest;
+            }
+          }
+          var number = label.indexOf('pr-') === 0 ? label.substring(3) : '';
+          if (!isAllDigits(number)) {
+            return { statusCode: 404, statusDescription: 'Not Found', headers: { 'content-type': { value: 'text/plain' } } };
+          }
+          var uri = request.uri;
+          if (uri.endsWith('/')) {
+            uri += 'index.html';
+          } else {
+            var last = uri.substring(uri.lastIndexOf('/') + 1);
+            if (last.indexOf('.') === -1) { uri = '/index.html'; }
+          }
+          request.uri = '/web/' + label + uri;
+          return request;
+        }
+        function isAllDigits(s) {
+          if (s.length === 0) { return false; }
+          for (var i = 0; i < s.length; i++) {
+            var c = s.charCodeAt(i);
+            if (c < 48 || c > 57) { return false; }
+          }
+          return true;
+        }
+
+  # ── preview 배포 (멀티테넌트) ──────────────────────────────────────────────
   PreviewDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
-        Comment: !Sub '${ServiceName} preview static hosting'
+        IPV6Enabled: true
+        Comment: !Sub '${ServiceName} preview (multi-tenant pr-*)'
         DefaultRootObject: index.html
+        PriceClass: PriceClass_200
+        Aliases: !If
+          - HasCustomDomain
+          - [!Sub '*.${PreviewSubdomain}.${ApexDomain}']
+          - !Ref 'AWS::NoValue'
         Origins:
           - Id: artifacts
             DomainName: !GetAtt ArtifactBucket.RegionalDomainName
-            OriginAccessControlId: !Ref PreviewOriginAccessControl
-            S3OriginConfig: {}
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
         DefaultCacheBehavior:
           TargetOriginId: artifacts
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods: [GET, HEAD, OPTIONS]
           CachedMethods: [GET, HEAD]
           Compress: true
-          ForwardedValues:
-            QueryString: false
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt PreviewRouterFunction.FunctionARN
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  # ── staging 배포 ───────────────────────────────────────────────────────────
+  StagingDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        Comment: !Sub '${ServiceName} staging'
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_200
+        Aliases: !If [HasCustomDomain, [!Ref StagingHost], !Ref 'AWS::NoValue']
+        Origins:
+          - Id: artifacts
+            DomainName: !GetAtt ArtifactBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            OriginPath: !Sub '/${ServiceName}/staging/current'
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: artifacts
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  # ── production 배포 ────────────────────────────────────────────────────────
+  ProductionDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        Comment: !Sub '${ServiceName} production'
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_All
+        Aliases: !If [HasCustomDomain, [!Ref ProductionHost], !Ref 'AWS::NoValue']
+        Origins:
+          - Id: artifacts
+            DomainName: !GetAtt ArtifactBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            OriginPath: !Sub '/${ServiceName}/production/current'
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: artifacts
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  # ── GitHub OIDC provider + 역할 4개 ────────────────────────────────────────
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOidc
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fca
+
+  PreviewRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ServiceName}-gha-preview'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOidc
+                - !Ref GithubOidc
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': sts.amazonaws.com
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOwner}/${GitHubRepo}:environment:preview'
+      Policies:
+        - PolicyName: preview-deploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WritePreviewArtifacts
+                Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject']
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}/${ServiceName}/pr-*'
+              - Sid: ListPreviewPrefixes
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}'
+                Condition:
+                  StringLike:
+                    's3:prefix': !Sub '${ServiceName}/pr-*'
+              - Sid: InvalidatePreview
+                Effect: Allow
+                Action: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${PreviewDistribution}'
+              - Sid: AmplifyPreviewBranch
+                Effect: Allow
+                Action: ['amplify:StartDeployment', 'amplify:GetJob', 'amplify:CreateBranch', 'amplify:DeleteBranch']
+                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/pr-*'
+
+  StagingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ServiceName}-gha-staging'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOidc
+                - !Ref GithubOidc
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': sts.amazonaws.com
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOwner}/${GitHubRepo}:environment:staging'
+      Policies:
+        - PolicyName: staging-deploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WriteStagingArtifacts
+                Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject']
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}/${ServiceName}/staging/*'
+              - Sid: ListStagingPrefixes
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}'
+                Condition:
+                  StringLike:
+                    's3:prefix': !Sub '${ServiceName}/staging/*'
+              - Sid: InvalidateStaging
+                Effect: Allow
+                Action: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${StagingDistribution}'
+
+  ProductionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ServiceName}-gha-production'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOidc
+                - !Ref GithubOidc
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': sts.amazonaws.com
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOwner}/${GitHubRepo}:environment:production'
+      Policies:
+        - PolicyName: production-deploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WriteProductionArtifacts
+                Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject']
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}/${ServiceName}/production/*'
+              - Sid: ListProductionPrefixes
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}'
+                Condition:
+                  StringLike:
+                    's3:prefix': !Sub '${ServiceName}/production/*'
+              - Sid: InvalidateProduction
+                Effect: Allow
+                Action: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ProductionDistribution}'
+
+  CleanupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ServiceName}-gha-cleanup'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOidc
+                - !Ref GithubOidc
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': sts.amazonaws.com
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOwner}/${GitHubRepo}:environment:preview'
+      Policies:
+        - PolicyName: preview-cleanup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DeletePreviewArtifacts
+                Effect: Allow
+                Action: ['s3:DeleteObject', 's3:GetObject']
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}/${ServiceName}/pr-*'
+              - Sid: ListForCleanup
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucketName}'
+                Condition:
+                  StringLike:
+                    's3:prefix': !Sub '${ServiceName}/pr-*'
+              - Sid: AmplifyDeletePreviewBranch
+                Effect: Allow
+                Action: ['amplify:DeleteBranch', 'amplify:ListBranches']
+                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/pr-*'
 
 Outputs:
   ArtifactBucket:
     Value: !Ref ArtifactBucket
   PreviewDistributionId:
     Value: !Ref PreviewDistribution
+  StagingDistributionId:
+    Value: !Ref StagingDistribution
+  ProductionDistributionId:
+    Value: !Ref ProductionDistribution
   PreviewCloudFrontDomain:
     Value: !GetAtt PreviewDistribution.DomainName
+  StagingCloudFrontDomain:
+    Value: !GetAtt StagingDistribution.DomainName
+  ProductionCloudFrontDomain:
+    Value: !GetAtt ProductionDistribution.DomainName
+  PreviewRoleArn:
+    Value: !GetAtt PreviewRole.Arn
+  StagingRoleArn:
+    Value: !GetAtt StagingRole.Arn
+  ProductionRoleArn:
+    Value: !GetAtt ProductionRole.Arn
+  CleanupRoleArn:
+    Value: !GetAtt CleanupRole.Arn
