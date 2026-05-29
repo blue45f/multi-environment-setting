@@ -1,0 +1,160 @@
+name: deploy
+
+# build-once, deploy-many. (가이드 §4.3)
+#   build → deploy-staging → (production environment reviewer 승인) → deploy-production
+# 한 번 빌드한 동일 artifact를 staging과 production에 그대로 승격한다. 환경별 재빌드 없음.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 배포 대상
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+  id-token: write
+  deployments: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # 배포는 중간 취소하지 않는다.
+
+env:
+  SERVICE_NAME: web
+  APP_DIR: apps/web
+  OUTPUT_DIR: apps/web/out
+
+jobs:
+  # ── 1) 한 번만 빌드해서 GitHub artifact로 올린다 ──────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: ${{ env.APP_DIR }}/pnpm-lock.yaml
+      - run: corepack enable
+      - name: Install
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm lint
+      - name: Typecheck
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm typecheck
+      - name: Test
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm test
+      - name: Build (static export)
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm build
+
+      - name: Package artifact + checksum
+        run: |
+          tar -czf app.tar.gz -C "${OUTPUT_DIR}" .
+          sha256sum app.tar.gz > app.tar.gz.sha256
+          cat app.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frontend-${{ github.sha }}
+          path: |
+            app.tar.gz
+            app.tar.gz.sha256
+          retention-days: 14
+
+  # ── 2) staging 배포 ───────────────────────────────────────────────────────
+  deploy-staging:
+    needs: build
+    if: github.event_name == 'push' || inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://${{ vars.STAGING_DOMAIN || 'staging.example.com' }}/
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-${{ needs.build.outputs.sha }}
+      - name: Unpack + select runtime config
+        run: |
+          echo "verify checksum"; sha256sum -c app.tar.gz.sha256
+          mkdir -p "${OUTPUT_DIR}"
+          tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
+          cp "${APP_DIR}/public/env.staging.json" "${OUTPUT_DIR}/env.json"
+
+      - name: Configure AWS credentials (OIDC, staging role)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_STAGING_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload immutable release + promote to current
+        run: |
+          SHA="${{ needs.build.outputs.sha }}"
+          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/staging"
+          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${SHA}"
+          ./scripts/promote.sh "${BASE}/releases/${SHA}" "${BASE}/current"
+
+      - name: Invalidate CloudFront (entry/config만)
+        run: ./scripts/invalidate.sh "${{ vars.STAGING_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
+
+      - name: Smoke test
+        if: vars.STAGING_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright test tests/smoke --project=chromium
+        env:
+          BASE_URL: https://${{ vars.STAGING_DOMAIN }}/
+
+  # ── 3) production 배포 (environment reviewer 승인 후) ──────────────────────
+  deploy-production:
+    needs: [build, deploy-staging]
+    if: github.event_name == 'push' || inputs.target == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production # ← Settings에서 required reviewers를 걸면 이 지점에서 승인 대기
+      url: https://${{ vars.PRODUCTION_DOMAIN || 'www.example.com' }}/
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-${{ needs.build.outputs.sha }}
+      - name: Unpack + select runtime config
+        run: |
+          sha256sum -c app.tar.gz.sha256
+          mkdir -p "${OUTPUT_DIR}"
+          tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
+          cp "${APP_DIR}/public/env.production.json" "${OUTPUT_DIR}/env.json"
+
+      - name: Configure AWS credentials (OIDC, production role)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PRODUCTION_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload immutable release + promote to current
+        run: |
+          SHA="${{ needs.build.outputs.sha }}"
+          BASE="s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/production"
+          ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "${BASE}/releases/${SHA}"
+          ./scripts/promote.sh "${BASE}/releases/${SHA}" "${BASE}/current"
+
+      - name: Invalidate CloudFront (entry/config만)
+        run: ./scripts/invalidate.sh "${{ vars.PRODUCTION_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
+
+      - name: Smoke test
+        if: vars.PRODUCTION_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright test tests/smoke --project=chromium
+        env:
+          BASE_URL: https://${{ vars.PRODUCTION_DOMAIN }}/

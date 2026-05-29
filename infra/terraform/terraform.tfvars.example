@@ -1,0 +1,32 @@
+# 이 파일을 terraform.tfvars 로 복사한 뒤 값을 채운다.
+#   cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvars 는 .gitignore에 의해 커밋되지 않는다 (실제 계정/도메인 값 보호).
+
+# ── 필수 ────────────────────────────────────────────────────────────────────
+github_owner = "blue45f" # GitHub 조직/사용자
+github_repo  = "heejun"  # 저장소 이름
+
+# ── 기본값으로 충분하면 생략 가능 ────────────────────────────────────────────
+service_name = "web"
+aws_region   = "ap-northeast-2"
+
+# 계정에 GitHub OIDC provider가 이미 있으면 false 로 두고 import 한다.
+#   terraform import 'aws_iam_openid_connect_provider.github[0]' \
+#     arn:aws:iam::<account_id>:oidc-provider/token.actions.githubusercontent.com
+create_oidc_provider = true
+
+# ── custom 도메인 (선택) ─────────────────────────────────────────────────────
+# 도메인이 없으면 false로 두고 CloudFront 기본 도메인으로 먼저 테스트한다.
+# true로 바꾸면 아래 도메인/hosted_zone_id가 필요하다.
+enable_custom_domain = false
+
+# enable_custom_domain = true 일 때만 사용:
+# apex_domain       = "example.com"
+# preview_subdomain = "preview"            # -> *.preview.example.com
+# staging_host      = "staging.example.com"
+# production_host   = "www.example.com"
+# hosted_zone_id    = "Z0123456789ABCDEFGHIJ"  # apex_domain의 Route53 zone ID
+
+# ── 수명주기 (선택) ──────────────────────────────────────────────────────────
+# preview_expiration_days = 14
+# release_expiration_days = 90

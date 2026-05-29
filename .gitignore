@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# env / secrets (절대 커밋 금지)
+.env
+.env.*
+!.env.example
+
+# terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+# 실제 값이 담기는 tfvars는 커밋하지 않는다 (.example만 커밋)
+terraform.tfvars
+*.auto.tfvars
+
+# aws / local artifacts
+*.tar.gz
+*.tar.gz.sha256
+
+# editor / os
+.DS_Store
+.idea/
+.vscode/
+*.log

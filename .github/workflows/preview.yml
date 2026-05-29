@@ -1,0 +1,166 @@
+name: preview
+
+# PR마다 고유 preview URL을 만든다. (가이드 §4.4)
+#   lint/typecheck/test/build 통과 → S3 업로드 → CloudFront invalidation → PR 코멘트
+# PR close 시 정리는 cleanup-preview.yml이 담당한다.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  id-token: write # OIDC. 장기 AWS 키를 쓰지 않는다.
+  pull-requests: write # PR 코멘트
+  deployments: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  SERVICE_NAME: web
+  APP_DIR: apps/web
+  OUTPUT_DIR: apps/web/out
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: ${{ env.APP_DIR }}/pnpm-lock.yaml
+
+      - run: corepack enable
+
+      - name: Install
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm install --frozen-lockfile
+
+      # 검증 게이트: 하나라도 실패하면 배포하지 않는다.
+      - name: Lint
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm lint
+      - name: Typecheck
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm typecheck
+      - name: Test
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm test
+
+      - name: Build (static export)
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm build
+
+      - name: Select runtime config + write deployment metadata
+        run: |
+          cp "${APP_DIR}/public/env.preview.json" "${OUTPUT_DIR}/env.json"
+          cat > "${OUTPUT_DIR}/deployment.json" <<EOF
+          {
+            "service": "${SERVICE_NAME}",
+            "environment": "preview",
+            "pullRequest": ${{ github.event.pull_request.number }},
+            "sourceRevision": "${GITHUB_SHA}",
+            "ref": "${GITHUB_REF}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy to S3 (cache-control 분리)
+        run: ./scripts/deploy-s3.sh "${OUTPUT_DIR}" "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}"
+
+      - name: Invalidate CloudFront (이 PR prefix만)
+        run: ./scripts/invalidate.sh "${{ vars.PREVIEW_DISTRIBUTION_ID }}" "/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}/*"
+
+      # (선택) Pattern B — Amplify manual deploy. vars.AMPLIFY_APP_ID가 설정된 경우에만.
+      - name: Amplify manual deployment (optional)
+        if: vars.AMPLIFY_APP_ID != ''
+        run: |
+          aws amplify start-deployment \
+            --app-id "${{ vars.AMPLIFY_APP_ID }}" \
+            --branch-name "pr-${{ github.event.pull_request.number }}" \
+            --source-url-type BUCKET_PREFIX \
+            --source-url "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE_NAME}/pr-${{ github.event.pull_request.number }}/"
+
+      - name: Compute preview URL
+        id: url
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          if [ -n "${{ vars.PREVIEW_BASE_DOMAIN }}" ]; then
+            echo "url=https://pr-${PR}.${{ vars.PREVIEW_BASE_DOMAIN }}/" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ vars.PREVIEW_CLOUDFRONT_DOMAIN }}" ]; then
+            echo "url=https://${{ vars.PREVIEW_CLOUDFRONT_DOMAIN }}/pr-${PR}/" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://pr-${PR}.preview.example.com/" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 실제 도메인이 설정된 경우에만 배포 URL 기준 smoke를 돌린다.
+      - name: Wait for URL
+        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.url.outputs.url }}" || true)
+            if [ "$code" = "200" ]; then echo "ready"; exit 0; fi
+            echo "waiting ($i): http=$code"; sleep 5
+          done
+          echo "URL not ready in time"; exit 1
+
+      - name: Smoke test (deployed URL 기준)
+        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright test tests/smoke --project=chromium
+        env:
+          BASE_URL: ${{ steps.url.outputs.url }}
+
+      - name: Comment preview URL (upsert)
+        uses: actions/github-script@v9
+        env:
+          PREVIEW_URL: ${{ steps.url.outputs.url }}
+        with:
+          script: |
+            const marker = '<!-- preview-bot -->';
+            const sha = context.sha.slice(0, 7);
+            const body = [
+              marker,
+              '## 🚀 Preview 배포 완료',
+              '',
+              '| 항목 | 값 |',
+              '| --- | --- |',
+              `| URL | ${process.env.PREVIEW_URL} |`,
+              `| Revision | \`${sha}\` |`,
+              `| 만료 | PR close 또는 일일 cleanup |`,
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
