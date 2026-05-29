@@ -24,6 +24,7 @@
 ```text
 multi-environment-setting/
 ├── README.md                     # ← 단일 진실 공급원 (이 문서)
+├── Makefile                      # 단일 진입점 (make / make bootstrap)
 ├── .nvmrc                        # Node 버전 핀 (CI/로컬 공통)
 ├── .gitignore
 ├── docs/
@@ -51,8 +52,13 @@ multi-environment-setting/
 │   └── workflows/
 │       ├── preview.yml           # PR preview 배포 (S3 sync + invalidation + comment)
 │       ├── deploy.yml            # staging/production 승격 (build once, deploy many)
-│       └── cleanup-preview.yml   # PR close + schedule cleanup (dry-run 포함)
+│       ├── cleanup-preview.yml   # PR close + schedule cleanup (dry-run 포함)
+│       └── validate.yml          # 저장소 자기검증 (terraform/shell/actions/app · AWS 불필요)
 ├── scripts/
+│   ├── preflight.sh              # 사전 조건(도구/인증/tfvars) 점검
+│   ├── bootstrap.sh              # 원커맨드 구축 (preflight → apply → gh-setup)
+│   ├── gh-setup.sh               # terraform output → GitHub 변수/환경 자동 설정
+│   ├── dev.sh                    # 로컬 멀티환경 미리보기 (env 선택)
 │   ├── deploy-s3.sh              # cache-control 분리 S3 업로드
 │   ├── invalidate.sh             # CloudFront invalidation (entry/config만)
 │   ├── promote.sh                # releases/<sha> → current 포인터 전환

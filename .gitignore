@@ -17,6 +17,8 @@ test-results/
 .env
 .env.*
 !.env.example
+# dev.sh가 생성하는 로컬 런타임 config (env.<stage>.json 템플릿만 커밋)
+apps/web/public/env.json
 
 # terraform
 infra/terraform/.terraform/

@@ -32,11 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # corepack(pnpm)은 setup-node가 설치한 Node에서 활성화한다.
+      # (setup-node의 cache:pnpm은 pnpm이 PATH에 먼저 있어야 해서 corepack과 순서 충돌 → 사용 안 함)
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: ${{ env.APP_DIR }}/pnpm-lock.yaml
 
       - run: corepack enable
 

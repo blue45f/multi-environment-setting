@@ -40,8 +40,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: ${{ env.APP_DIR }}/pnpm-lock.yaml
       - run: corepack enable
       - name: Install
         working-directory: ${{ env.APP_DIR }}
@@ -109,6 +107,17 @@ jobs:
       - name: Invalidate CloudFront (entry/config만)
         run: ./scripts/invalidate.sh "${{ vars.STAGING_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
 
+      # smoke를 위해 node/pnpm/deps를 준비한다 (이 job은 배포만 하므로 별도 셋업 필요).
+      - uses: actions/setup-node@v6
+        if: vars.STAGING_DOMAIN != ''
+        with:
+          node-version-file: .nvmrc
+      - if: vars.STAGING_DOMAIN != ''
+        run: corepack enable
+      - name: Install app deps (smoke)
+        if: vars.STAGING_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browser
         if: vars.STAGING_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
@@ -156,6 +165,16 @@ jobs:
       - name: Invalidate CloudFront (entry/config만)
         run: ./scripts/invalidate.sh "${{ vars.PRODUCTION_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
 
+      - uses: actions/setup-node@v6
+        if: vars.PRODUCTION_DOMAIN != ''
+        with:
+          node-version-file: .nvmrc
+      - if: vars.PRODUCTION_DOMAIN != ''
+        run: corepack enable
+      - name: Install app deps (smoke)
+        if: vars.PRODUCTION_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browser
         if: vars.PRODUCTION_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}

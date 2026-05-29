@@ -1,6 +1,11 @@
 # 아래 출력값을 GitHub repository variables에 넣는다 (README §5 표 참고).
 # 확인: terraform output  /  특정 값: terraform output -raw artifact_bucket
 
+output "aws_region" {
+  description = "GitHub var: AWS_REGION"
+  value       = var.aws_region
+}
+
 output "artifact_bucket" {
   description = "GitHub var: ARTIFACT_BUCKET"
   value       = aws_s3_bucket.artifacts.bucket

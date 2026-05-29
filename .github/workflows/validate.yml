@@ -1,0 +1,64 @@
+name: validate
+
+# 저장소 자체 검증 (AWS 자격증명 불필요). 스캐폴드를 건강하게 유지한다.
+#   - terraform validate / fmt
+#   - shellcheck (scripts)
+#   - actionlint (workflows)
+#   - 앱 lint/typecheck/test/build (배포 없이)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform -chdir=infra/terraform fmt -check -recursive
+        continue-on-error: true # 포맷은 경고만 (빌드를 막지 않음)
+      - name: terraform validate
+        run: |
+          terraform -chdir=infra/terraform init -backend=false -input=false
+          terraform -chdir=infra/terraform validate
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: shellcheck (scripts)
+        run: shellcheck scripts/*.sh # shellcheck는 ubuntu 러너에 기본 설치
+
+  actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: actionlint
+        run: |
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
