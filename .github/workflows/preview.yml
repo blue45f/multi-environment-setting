@@ -118,6 +118,11 @@ jobs:
           done
           echo "URL not ready in time"; exit 1
 
+      - name: Install Playwright browser
+        if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Smoke test (deployed URL 기준)
         if: vars.PREVIEW_BASE_DOMAIN != '' || vars.PREVIEW_CLOUDFRONT_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}

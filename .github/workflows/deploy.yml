@@ -109,6 +109,10 @@ jobs:
       - name: Invalidate CloudFront (entry/config만)
         run: ./scripts/invalidate.sh "${{ vars.STAGING_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
 
+      - name: Install Playwright browser
+        if: vars.STAGING_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright install --with-deps chromium
       - name: Smoke test
         if: vars.STAGING_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}
@@ -152,6 +156,10 @@ jobs:
       - name: Invalidate CloudFront (entry/config만)
         run: ./scripts/invalidate.sh "${{ vars.PRODUCTION_DISTRIBUTION_ID }}" "/index.html" "/env.json" "/deployment.json"
 
+      - name: Install Playwright browser
+        if: vars.PRODUCTION_DOMAIN != ''
+        working-directory: ${{ env.APP_DIR }}
+        run: pnpm exec playwright install --with-deps chromium
       - name: Smoke test
         if: vars.PRODUCTION_DOMAIN != ''
         working-directory: ${{ env.APP_DIR }}

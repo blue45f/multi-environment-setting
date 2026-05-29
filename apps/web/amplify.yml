@@ -1,0 +1,25 @@
+# Pattern B (Amplify Hosting) 빌드 스펙 — static export 산출물(out/)을 호스팅한다.
+# 사용처:
+#   - Amplify 콘솔에서 이 저장소를 Git 연결할 때, 또는
+#   - GitHub Actions가 만든 out/을 `aws amplify start-deployment`로 올릴 때(Pattern B)
+# SSR이 필요하면 next.config.ts의 output:'export'를 제거하고 baseDirectory를 .next로 바꾼다.
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - corepack enable
+            - pnpm install --frozen-lockfile
+        build:
+          commands:
+            - pnpm build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .next/cache/**/*
