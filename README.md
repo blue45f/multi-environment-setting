@@ -68,7 +68,7 @@ multi-environment-setting/
 │   ├── promote.sh                # releases/<sha> → current 포인터 전환
 │   ├── rollback.sh               # 이전 release로 current 복구 + invalidation
 │   └── cleanup-preview.sh        # 안전 가드가 있는 preview prefix 삭제
-└── apps/web/                     # 예제 Next.js static-export 앱
+└── apps/web/                     # 예제 Next.js static-export 앱 (Next 16 · React 19 · React Compiler 활성화)
     ├── package.json
     ├── next.config.ts
     ├── amplify.yml               # Pattern B(Amplify) 빌드 스펙

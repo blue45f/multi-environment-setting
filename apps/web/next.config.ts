@@ -2,6 +2,11 @@ import type { NextConfig } from 'next';
 
 // 정적 export 설정 (가이드 Pattern C — S3 + CloudFront 직접 서빙)
 const nextConfig: NextConfig = {
+  // React Compiler 를 켠다 (Next 16: experimental 에서 승격된 top-level 키).
+  //  - babel-plugin-react-compiler 가 devDependency 로 설치되어 있어야 Next 가 인식한다.
+  //  - React 19 기반이라 별도 런타임 shim 없이 동작한다.
+  reactCompiler: true,
+
   // out/ 디렉터리에 순수 정적 산출물(HTML/CSS/JS)을 생성한다.
   // 워크플로(deploy.yml / preview.yml)가 apps/web/out 을 그대로 S3에 업로드한다.
   output: 'export',
