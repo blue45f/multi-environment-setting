@@ -64,8 +64,18 @@ jobs:
             ( cd "${d}" \
               && pnpm install --frozen-lockfile \
               && pnpm lint \
+              && pnpm run --if-present format:check \
               && pnpm typecheck \
               && pnpm test \
               && pnpm build )
             echo "::endgroup::"
           done
+
+  # 포트폴리오 공통 required check 이름("Verify")을 제공하는 경량 집계 잡.
+  # 기존 잡(iac/shell/actions/app)은 그대로 두고, 브랜치 보호가 통일된
+  # "Verify" 체크 하나에 키를 걸 수 있게 한다.
+  Verify:
+    needs: [iac, shell, actions, app]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "✓ all validate jobs passed"

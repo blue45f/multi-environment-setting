@@ -43,9 +43,9 @@ test('@preview Core Web Vitals 가 성능 예산 안에 있다', async ({ page }
   await expect(page.getByTestId('stage')).not.toHaveText('loading...');
 
   const vitals = await page.evaluate<WebVitals>(async () => {
-    const navEntry = performance.getEntriesByType(
-      'navigation',
-    )[0] as PerformanceNavigationTiming | undefined;
+    const navEntry = performance.getEntriesByType('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
 
     // LCP / CLS 는 PerformanceObserver 버퍼에서 읽는다(buffered: true 로 과거 엔트리 포함).
     const lcp = await new Promise<number | null>((resolve) => {
@@ -101,11 +101,14 @@ test('@preview Core Web Vitals 가 성능 예산 안에 있다', async ({ page }
   // 예산 단언. 값이 측정 불가(null)인 지표는 환경 차이로 흔들릴 수 있으므로 건너뛴다
   // (정적 export + 헤드리스에서 일부 지표가 비는 경우가 있어 게이트를 막지 않는다).
   if (vitals.lcpMs !== null) {
-    expect(vitals.lcpMs, `LCP ${Math.round(vitals.lcpMs)}ms > ${BUDGET.lcpMs}ms`).toBeLessThanOrEqual(
-      BUDGET.lcpMs,
-    );
+    expect(
+      vitals.lcpMs,
+      `LCP ${Math.round(vitals.lcpMs)}ms > ${BUDGET.lcpMs}ms`,
+    ).toBeLessThanOrEqual(BUDGET.lcpMs);
   }
-  expect(vitals.cls, `CLS ${vitals.cls.toFixed(3)} > ${BUDGET.cls}`).toBeLessThanOrEqual(BUDGET.cls);
+  expect(vitals.cls, `CLS ${vitals.cls.toFixed(3)} > ${BUDGET.cls}`).toBeLessThanOrEqual(
+    BUDGET.cls,
+  );
   if (vitals.ttfbMs !== null) {
     expect(
       vitals.ttfbMs,
