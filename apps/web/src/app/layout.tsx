@@ -1,60 +1,25 @@
 import type { ReactNode } from 'react';
 
+import './globals.css';
+
 export const metadata = {
   title: 'Multi-Environment Demo',
   description: '다중 개발 서버 레퍼런스 예제 앱',
 };
 
-// 전역 a11y 스타일: 키보드 포커스 링(:focus-visible)과 스크린리더 전용 유틸,
-// 그리고 모션 최소화 선호 존중. 무거운 디자인 시스템 없이 인라인 <style>로 최소화.
-const globalA11yCss = `
-  *:focus-visible {
-    outline: 2px solid #9fb0e0;
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-  .skip-link {
-    position: absolute;
-    left: 8px;
-    top: -48px;
-    z-index: 100;
-    padding: 8px 16px;
-    background: #6c8cff;
-    color: #0b1020;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: top 0.15s ease;
-  }
-  .skip-link:focus {
-    top: 8px;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-`;
+// no-FOUC pre-paint: 첫 페인트 전에 저장된 테마 선호를 <html data-theme>에 박는다.
+// 'system'(or 미설정)이면 data-theme를 비워 globals.css의 prefers-color-scheme가 결정한다.
+// globals.css 토큰이 [data-theme] 와 prefers-color-scheme 둘 다를 다루므로,
+// 이 스크립트는 깜빡임(light→dark 점프)만 막는 역할이다.
+const noFoucScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: globalA11yCss }} />
+        <script dangerouslySetInnerHTML={{ __html: noFoucScript }} />
       </head>
-      <body
-        style={{
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          margin: 0,
-          background: '#0b1020',
-          color: '#e7ecff',
-        }}
-      >
+      <body>
         <a className="skip-link" href="#content">
           본문으로 건너뛰기
         </a>
