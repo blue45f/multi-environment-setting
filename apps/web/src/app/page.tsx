@@ -48,7 +48,9 @@ export default function Home() {
           </p>
         )}
 
-        <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', margin: 0 }}>
+        <dl
+          style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', margin: 0 }}
+        >
           <dt style={{ color: '#9fb0e0' }}>stage</dt>
           <dd style={{ margin: 0 }}>
             <span

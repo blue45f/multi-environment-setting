@@ -9,11 +9,12 @@ fail=0
 for dir in apps/*/; do
   [ -f "${dir}package.json" ] || continue
   svc="$(basename "$dir")"
-  echo "════ [$svc] install · lint · typecheck · test · build ════"
+  echo "════ [$svc] install · lint · format:check · typecheck · test · build ════"
   (
     cd "$dir" &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm lint &&
+      corepack pnpm run --if-present format:check &&
       corepack pnpm typecheck &&
       corepack pnpm test &&
       corepack pnpm build
