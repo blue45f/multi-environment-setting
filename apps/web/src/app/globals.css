@@ -1,0 +1,213 @@
+/*
+ * ──────────────────────────────────────────────────────────────────────────
+ * Semantic token layer — "engineering paper" status console
+ *
+ * spa-seo admin-frontend 의 OKLCH 토큰 접근을 이 레퍼런스 데모 1페이지에 맞게 이식.
+ * Tailwind 없이 순수 CSS 변수만 사용한다(무거운 UI 의존성 X, 정적 export 그대로 동작).
+ *
+ * 전략: Restrained — 정체성은 hue 가 아니라 "따뜻한 중립색 + 타이포 + 밀도".
+ * 모든 색은 OKLCH. #000/#fff 금지 — 모든 중립색을 warm hue(~80)로 틴트.
+ * accent 는 violet-blue(~285) 단일색으로 focus / 링크 / preview stage 에만(<10%).
+ * stage 삼색은 status 토큰으로 매핑: preview=accent, staging=warn(amber ~75),
+ * production=ok(green ~150). accent 와 hue 가 겹치지 않아 색만으로도 구분 가능하지만,
+ * 페이지는 색 + 기호(◆▲●) + 라벨을 항상 함께 노출한다(WCAG 1.4.1).
+ *
+ * 테마: light 기본 + prefers-color-scheme 다크. 토글이 켜지면 [data-theme] 가 우선한다.
+ * pre-paint 스크립트(layout.tsx)가 첫 페인트 전에 data-theme 를 박아 FOUC 를 막는다.
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+
+:root {
+  /* warm "paper" 중립 — 차가운 slate 가 아님 */
+  --app-bg: oklch(0.974 0.005 80);
+  --app-panel: oklch(0.995 0.0025 80);
+  --app-panel-2: oklch(0.955 0.006 80);
+  --app-line: oklch(0.905 0.006 80);
+  --app-line-strong: oklch(0.85 0.008 80);
+
+  --app-ink: oklch(0.28 0.012 80);
+  --app-ink-muted: oklch(0.47 0.01 80);
+  --app-ink-subtle: oklch(0.54 0.01 80); /* WCAG AA: ≥4.5:1 on panel */
+
+  /* accent — violet-blue, 작은 면적 전용(focus / 링크 / preview stage) */
+  --app-accent: oklch(0.54 0.185 285);
+  --app-accent-hover: oklch(0.49 0.195 285);
+  --app-accent-fg: oklch(0.985 0.012 285);
+  --app-accent-soft: oklch(0.95 0.03 285);
+
+  /* status — 서로/accent 와 hue 분리. stage 삼색이 여기에 매핑된다. */
+  --app-ok: oklch(0.58 0.13 150);
+  --app-ok-bg: oklch(0.95 0.04 150);
+  --app-ok-fg: oklch(0.4 0.1 150);
+  --app-warn: oklch(0.72 0.14 75);
+  --app-warn-bg: oklch(0.95 0.06 75);
+  --app-warn-fg: oklch(0.5 0.12 75);
+  --app-err: oklch(0.57 0.2 25);
+  --app-err-bg: oklch(0.95 0.05 25);
+  --app-err-fg: oklch(0.47 0.18 25);
+
+  /* stage 별칭 — 페이지가 stage 키로 직접 참조하는 의미 토큰 */
+  --stage-preview: var(--app-accent);
+  --stage-preview-bg: var(--app-accent-soft);
+  --stage-preview-fg: var(--app-accent-hover);
+  --stage-staging: var(--app-warn);
+  --stage-staging-bg: var(--app-warn-bg);
+  --stage-staging-fg: var(--app-warn-fg);
+  --stage-production: var(--app-ok);
+  --stage-production-bg: var(--app-ok-bg);
+  --stage-production-fg: var(--app-ok-fg);
+
+  --app-shadow: 0 1px 2px oklch(0.28 0.012 80 / 0.05), 0 8px 28px oklch(0.28 0.012 80 / 0.08);
+
+  --app-focus: var(--app-accent);
+}
+
+/* 토글이 없을 때(or 'system') 시스템 다크 선호 존중 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --app-bg: oklch(0.175 0.006 80);
+    --app-panel: oklch(0.215 0.007 80);
+    --app-panel-2: oklch(0.255 0.008 80);
+    --app-line: oklch(0.305 0.008 80);
+    --app-line-strong: oklch(0.4 0.01 80);
+
+    --app-ink: oklch(0.93 0.006 80);
+    --app-ink-muted: oklch(0.71 0.008 80);
+    --app-ink-subtle: oklch(0.64 0.008 80);
+
+    --app-accent: oklch(0.7 0.16 285);
+    --app-accent-hover: oklch(0.76 0.15 285);
+    --app-accent-fg: oklch(0.16 0.02 285);
+    --app-accent-soft: oklch(0.3 0.06 285);
+
+    --app-ok: oklch(0.72 0.15 150);
+    --app-ok-bg: oklch(0.27 0.05 150);
+    --app-ok-fg: oklch(0.82 0.13 150);
+    --app-warn: oklch(0.8 0.14 75);
+    --app-warn-bg: oklch(0.3 0.05 75);
+    --app-warn-fg: oklch(0.85 0.12 75);
+    --app-err: oklch(0.7 0.18 25);
+    --app-err-bg: oklch(0.3 0.06 25);
+    --app-err-fg: oklch(0.84 0.14 25);
+
+    --stage-preview-fg: oklch(0.8 0.13 285);
+
+    --app-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 28px oklch(0 0 0 / 0.35);
+  }
+}
+
+/* 명시적 다크 토글 — prefers-color-scheme 와 무관하게 우선한다 */
+:root[data-theme='dark'] {
+  --app-bg: oklch(0.175 0.006 80);
+  --app-panel: oklch(0.215 0.007 80);
+  --app-panel-2: oklch(0.255 0.008 80);
+  --app-line: oklch(0.305 0.008 80);
+  --app-line-strong: oklch(0.4 0.01 80);
+
+  --app-ink: oklch(0.93 0.006 80);
+  --app-ink-muted: oklch(0.71 0.008 80);
+  --app-ink-subtle: oklch(0.64 0.008 80);
+
+  --app-accent: oklch(0.7 0.16 285);
+  --app-accent-hover: oklch(0.76 0.15 285);
+  --app-accent-fg: oklch(0.16 0.02 285);
+  --app-accent-soft: oklch(0.3 0.06 285);
+
+  --app-ok: oklch(0.72 0.15 150);
+  --app-ok-bg: oklch(0.27 0.05 150);
+  --app-ok-fg: oklch(0.82 0.13 150);
+  --app-warn: oklch(0.8 0.14 75);
+  --app-warn-bg: oklch(0.3 0.05 75);
+  --app-warn-fg: oklch(0.85 0.12 75);
+  --app-err: oklch(0.7 0.18 25);
+  --app-err-bg: oklch(0.3 0.06 25);
+  --app-err-fg: oklch(0.84 0.14 25);
+
+  --stage-preview-fg: oklch(0.8 0.13 285);
+
+  --app-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 28px oklch(0 0 0 / 0.35);
+}
+
+/* ── base ─────────────────────────────────────────────────────────────── */
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizelegibility;
+}
+
+/* 기계 데이터(url / stage 값)는 mono + tabular 로 — instrument 시그니처 */
+code,
+.mono {
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── a11y: 키보드 포커스 링 + 스킵 링크 (기존 인라인 <style>에서 이식, 토큰화) ── */
+*:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--app-accent);
+  color: var(--app-accent-fg);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: top 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ── theme toggle — 작은 ghost 버튼(색/테두리만 변함, 레이아웃 애니메이션 없음) ── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-ink-muted);
+  background: var(--app-panel-2);
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.theme-toggle:hover {
+  color: var(--app-ink);
+  border-color: var(--app-line-strong);
+}
+
+/* ── 모션 최소화 선호 존중 (기존 보존) ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
