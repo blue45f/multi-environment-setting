@@ -78,7 +78,9 @@ multi-environment-setting/
     │   ├── env.preview.json
     │   ├── env.staging.json
     │   └── env.production.json
-    └── tests/smoke/preview.spec.ts
+    └── tests/smoke/
+        ├── preview.spec.ts        # 배포된 URL 로드 + 환경(stage) 표시 smoke
+        └── web-vitals.spec.ts     # Core Web Vitals 성능 예산 가드 (LCP/CLS/TTFB/load)
 ```
 
 ---
@@ -215,6 +217,22 @@ make verify                     # 모든 apps/* 검증 + (설치 시) shellcheck
 ```
 
 `make bootstrap`(실제 AWS 생성)은 계정이 준비되면 그때 실행하면 됩니다. CI의 `validate.yml`도 AWS 없이 통과합니다.
+
+### 성능 회귀 가드 (Core Web Vitals smoke)
+
+`tests/smoke/web-vitals.spec.ts`는 smoke 스위트(`playwright test tests/smoke`)에 포함되어 **배포된 실제 URL마다** Core Web Vitals를 측정하고 예산을 넘기면 배포를 실패시킵니다. 즉 `preview.yml`·`deploy.yml`(staging/production)·`make e2e-local`이 도는 모든 환경에서 자동으로 성능 회귀(번들 폭증·렌더 차단·레이아웃 점프)를 잡습니다. 추가 npm 의존성 없이 브라우저 네이티브 `PerformanceObserver`(LCP / layout-shift)와 Navigation Timing(TTFB / DOMContentLoaded / load)만 사용합니다.
+
+- 측정값은 Playwright 리포트에 `web-vitals.json`으로 첨부되고 `[web-vitals] …` 로그로도 출력됩니다.
+- 기본 예산은 Google "good" 임계의 약 2배(명백한 회귀에서만 실패 → CI 플레이키 회피)이며, 환경별로 워크플로 `env`에서 덮어쓸 수 있습니다.
+
+| 환경변수 | 기본값 | 의미 |
+| :--- | :--- | :--- |
+| `PERF_BUDGET_LCP_MS` | `4000` | Largest Contentful Paint 상한(ms) |
+| `PERF_BUDGET_CLS` | `0.25` | Cumulative Layout Shift 상한 |
+| `PERF_BUDGET_TTFB_MS` | `3000` | Time To First Byte 상한(ms, CDN miss 여유 포함) |
+| `PERF_BUDGET_LOAD_MS` | `8000` | 전체 `load` 이벤트 상한(ms) |
+
+> production을 더 빡세게 잡고 싶으면 `deploy.yml`의 production smoke 스텝 `env:`에 `PERF_BUDGET_LCP_MS: 2500` 처럼 추가하면 됩니다. 측정 불가(null) 지표는 환경 차이로 흔들릴 수 있어 게이트를 막지 않습니다.
 
 ---
 
