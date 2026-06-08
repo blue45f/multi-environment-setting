@@ -20,10 +20,10 @@ test-results/
 # dev.sh/e2e-local.sh가 생성하는 로컬 런타임 config (env.<stage>.json 템플릿만 커밋)
 # 모든 서비스(apps/<name>)에 적용
 apps/*/public/env.json
+rootkey.csv
 
 # terraform
-infra/terraform/.terraform/
-infra/terraform/.terraform.lock.hcl
+**/.terraform/
 *.tfstate
 *.tfstate.*
 crash.log

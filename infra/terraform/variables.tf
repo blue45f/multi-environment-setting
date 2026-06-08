@@ -2,6 +2,11 @@ variable "service_name" {
   description = "프로젝트 이름. 공유 artifact 버킷 이름 등 서비스 공통 리소스의 접두사."
   type        = string
   default     = "web"
+
+  validation {
+    condition     = can(regex("^[a-z]([a-z0-9-]*[a-z0-9])?$", var.service_name))
+    error_message = "service_name은 소문자로 시작하고 소문자/숫자/하이픈만 포함하며 하이픈으로 끝날 수 없습니다."
+  }
 }
 
 variable "services" {
@@ -16,6 +21,16 @@ variable "services" {
   validation {
     condition     = length(var.services) > 0
     error_message = "services는 최소 1개여야 합니다."
+  }
+
+  validation {
+    condition     = alltrue([for s in var.services : can(regex("^[a-z]([a-z0-9-]*[a-z0-9])?$", s))])
+    error_message = "services의 각 항목은 소문자로 시작하고 소문자/숫자/하이픈만 포함하며 하이픈으로 끝날 수 없습니다."
+  }
+
+  validation {
+    condition     = length(distinct(var.services)) == length(var.services)
+    error_message = "services에는 중복 서비스명을 넣을 수 없습니다."
   }
 }
 

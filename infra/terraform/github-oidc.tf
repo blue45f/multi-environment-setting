@@ -112,13 +112,13 @@ data "aws_iam_policy_document" "preview" {
     actions   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
     resources = [aws_cloudfront_distribution.preview[each.key].arn]
   }
-  statement {
-    sid       = "AmplifyPreviewBranch"
-    effect    = "Allow"
-    actions   = ["amplify:StartDeployment", "amplify:GetJob", "amplify:CreateBranch", "amplify:DeleteBranch"]
-    resources = ["arn:${local.partition}:amplify:${var.aws_region}:${local.account_id}:apps/*/branches/pr-*"]
-  }
-}
+	  statement {
+	    sid       = "AmplifyPreviewBranch"
+	    effect    = "Allow"
+	    actions   = ["amplify:StartDeployment", "amplify:GetJob", "amplify:CreateBranch"]
+	    resources = ["arn:${local.partition}:amplify:${var.aws_region}:${local.account_id}:apps/*/branches/${each.key}-pr-*"]
+	  }
+	}
 
 resource "aws_iam_role_policy" "preview" {
   for_each = local.services
@@ -238,13 +238,13 @@ data "aws_iam_policy_document" "cleanup" {
       values   = ["${each.key}/pr-*"]
     }
   }
-  statement {
-    sid       = "AmplifyDeletePreviewBranch"
-    effect    = "Allow"
-    actions   = ["amplify:DeleteBranch", "amplify:ListBranches"]
-    resources = ["arn:${local.partition}:amplify:${var.aws_region}:${local.account_id}:apps/*/branches/pr-*"]
-  }
-}
+	  statement {
+	    sid       = "AmplifyDeletePreviewBranch"
+	    effect    = "Allow"
+	    actions   = ["amplify:DeleteBranch"]
+	    resources = ["arn:${local.partition}:amplify:${var.aws_region}:${local.account_id}:apps/*/branches/${each.key}-pr-*"]
+	  }
+	}
 
 resource "aws_iam_role_policy" "cleanup" {
   for_each = local.services

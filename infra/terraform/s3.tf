@@ -57,7 +57,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
         days = var.preview_expiration_days
       }
       noncurrent_version_expiration {
-        noncurrent_days = 7
+        noncurrent_days = var.preview_expiration_days
       }
     }
   }
@@ -74,6 +74,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
       expiration {
         days = var.release_expiration_days
       }
+      noncurrent_version_expiration {
+        noncurrent_days = var.release_expiration_days
+      }
     }
   }
   dynamic "rule" {
@@ -87,6 +90,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
       expiration {
         days = var.release_expiration_days
       }
+      noncurrent_version_expiration {
+        noncurrent_days = var.release_expiration_days
+      }
     }
   }
 
@@ -95,7 +101,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
     status = "Enabled"
     filter {}
     abort_incomplete_multipart_upload {
-      days_after_initiation = 7
+      days_after_initiation = 1
     }
   }
 }

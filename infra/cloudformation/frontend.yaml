@@ -132,37 +132,108 @@ Resources:
       Name: !Sub '${ServiceName}-preview-router'
       AutoPublish: true
       FunctionConfig:
-        Comment: Route pr-<n> host/path to S3 prefix web/pr-<n>/ with SPA fallback
+        Comment: !Sub 'Route pr-<n> host/path to S3 prefix ${ServiceName}/pr-<n>/ with SPA fallback'
         Runtime: cloudfront-js-2.0
-      FunctionCode: |
+      FunctionCode: !Sub |
         function handler(event) {
+          var SERVICE = '${ServiceName}';
           var request = event.request;
           var host = (request.headers.host && request.headers.host.value) || '';
           var label = host.split('.')[0];
-          if (label.indexOf('pr-') !== 0) {
-            var seg = request.uri.split('/');
-            if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
-              label = seg[1];
-              var rest = seg.slice(2).join('/');
-              request.uri = rest === '' ? '/' : '/' + rest;
-            }
-          }
-          var number = label.indexOf('pr-') === 0 ? label.substring(3) : '';
-          if (!isAllDigits(number)) {
-            return { statusCode: 404, statusDescription: 'Not Found', headers: { 'content-type': { value: 'text/plain' } } };
+	          if (label.indexOf('pr-') !== 0) {
+	            var seg = request.uri.split('/');
+	            if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
+	              label = seg[1];
+	              var rest = seg.slice(2).join('/');
+	              request.uri = rest === '' ? '/' : '/' + rest;
+	            }
+	          }
+	          if (label.indexOf('pr-') !== 0) {
+	            var refererLabel = prLabelFromReferer((request.headers.referer && request.headers.referer.value) || '', host);
+	            if (refererLabel.indexOf('pr-') === 0 && isAllDigits(refererLabel.substring(3))) {
+	              if (isDocumentRequest(request.uri)) {
+	                return redirectToPreviewPath(refererLabel, request.uri, request.querystring);
+	              }
+	              label = refererLabel;
+	            }
+	          }
+	          var number = label.indexOf('pr-') === 0 ? label.substring(3) : '';
+	          if (!isAllDigits(number)) {
+	            return { statusCode: 404, statusDescription: 'Not Found', headers: { 'content-type': { value: 'text/plain' } } };
           }
           var uri = request.uri;
-          if (uri.endsWith('/')) {
-            uri += 'index.html';
-          } else {
+	          if (endsWithSlash(uri)) {
+	            uri += 'index.html';
+	          } else {
             var last = uri.substring(uri.lastIndexOf('/') + 1);
             if (last.indexOf('.') === -1) { uri = '/index.html'; }
           }
-          request.uri = '/web/' + label + uri;
-          return request;
-        }
-        function isAllDigits(s) {
-          if (s.length === 0) { return false; }
+	          request.uri = '/' + SERVICE + '/' + label + uri;
+	          return request;
+	        }
+	        function prLabelFromReferer(referer, currentHost) {
+	          var schemeIndex = referer.indexOf('://');
+	          if (schemeIndex !== -1) {
+	            var hostStart = schemeIndex + 3;
+	            var hostEnd = referer.indexOf('/', hostStart);
+	            var host = hostEnd === -1 ? referer.substring(hostStart) : referer.substring(hostStart, hostEnd);
+	            if (host !== currentHost) { return ''; }
+	            var first = host.split('.')[0];
+	            if (first.indexOf('pr-') === 0) { return first; }
+	            if (hostEnd !== -1) {
+	              var path = referer.substring(hostEnd);
+	              if (path.indexOf('/pr-') === 0) {
+	                var end = path.indexOf('/', 1);
+	                return end === -1 ? path.substring(1) : path.substring(1, end);
+	              }
+	            }
+	          }
+	          return '';
+	        }
+	        function isDocumentRequest(uri) {
+	          if (uri.indexOf('/_next/') === 0) { return false; }
+	          if (endsWithSlash(uri)) { return true; }
+	          var last = uri.substring(uri.lastIndexOf('/') + 1);
+	          return last.indexOf('.') === -1;
+	        }
+	        function redirectToPreviewPath(label, uri, querystring) {
+	          var location = '/' + label + uri;
+	          if (location.charAt(location.length - 1) !== '/') {
+	            var last = location.substring(location.lastIndexOf('/') + 1);
+	            if (last.indexOf('.') === -1) { location += '/'; }
+	          }
+	          location += serializeQuerystring(querystring);
+	          return {
+	            statusCode: 302,
+	            statusDescription: 'Found',
+	            headers: {
+	              location: { value: location }
+	            }
+	          };
+	        }
+	        function serializeQuerystring(querystring) {
+	          if (!querystring) { return ''; }
+	          var parts = [];
+	          for (var name in querystring) {
+	            if (!Object.prototype.hasOwnProperty.call(querystring, name)) { continue; }
+	            var item = querystring[name];
+	            if (item.multiValue) {
+	              for (var i = 0; i < item.multiValue.length; i++) {
+	                parts.push(name + '=' + item.multiValue[i].value);
+	              }
+	            } else if (item.value === '') {
+	              parts.push(name);
+	            } else {
+	              parts.push(name + '=' + item.value);
+	            }
+	          }
+	          return parts.length === 0 ? '' : '?' + parts.join('&');
+	        }
+	        function endsWithSlash(s) {
+	          return s.length > 0 && s.charAt(s.length - 1) === '/';
+	        }
+	        function isAllDigits(s) {
+	          if (s.length === 0) { return false; }
           for (var i = 0; i < s.length; i++) {
             var c = s.charCodeAt(i);
             if (c < 48 || c > 57) { return false; }
@@ -179,7 +250,7 @@ Resources:
         IPV6Enabled: true
         Comment: !Sub '${ServiceName} preview (multi-tenant pr-*)'
         DefaultRootObject: index.html
-        PriceClass: PriceClass_200
+        PriceClass: PriceClass_100
         Aliases: !If
           - HasCustomDomain
           - [!Sub '*.${PreviewSubdomain}.${ApexDomain}']
@@ -217,7 +288,7 @@ Resources:
         IPV6Enabled: true
         Comment: !Sub '${ServiceName} staging'
         DefaultRootObject: index.html
-        PriceClass: PriceClass_200
+        PriceClass: PriceClass_100
         Aliases: !If [HasCustomDomain, [!Ref StagingHost], !Ref 'AWS::NoValue']
         Origins:
           - Id: artifacts
@@ -259,7 +330,7 @@ Resources:
         IPV6Enabled: true
         Comment: !Sub '${ServiceName} production'
         DefaultRootObject: index.html
-        PriceClass: PriceClass_All
+        PriceClass: PriceClass_100
         Aliases: !If [HasCustomDomain, [!Ref ProductionHost], !Ref 'AWS::NoValue']
         Origins:
           - Id: artifacts
@@ -342,10 +413,10 @@ Resources:
                 Effect: Allow
                 Action: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation']
                 Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${PreviewDistribution}'
-              - Sid: AmplifyPreviewBranch
-                Effect: Allow
-                Action: ['amplify:StartDeployment', 'amplify:GetJob', 'amplify:CreateBranch', 'amplify:DeleteBranch']
-                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/pr-*'
+	              - Sid: AmplifyPreviewBranch
+	                Effect: Allow
+	                Action: ['amplify:StartDeployment', 'amplify:GetJob', 'amplify:CreateBranch']
+	                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/${ServiceName}-pr-*'
 
   StagingRole:
     Type: AWS::IAM::Role
@@ -462,10 +533,10 @@ Resources:
                 Condition:
                   StringLike:
                     's3:prefix': !Sub '${ServiceName}/pr-*'
-              - Sid: AmplifyDeletePreviewBranch
-                Effect: Allow
-                Action: ['amplify:DeleteBranch', 'amplify:ListBranches']
-                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/pr-*'
+	              - Sid: AmplifyDeletePreviewBranch
+	                Effect: Allow
+	                Action: ['amplify:DeleteBranch']
+	                Resource: !Sub 'arn:${AWS::Partition}:amplify:${AWS::Region}:${AWS::AccountId}:apps/*/branches/${ServiceName}-pr-*'
 
 Outputs:
   ArtifactBucket:

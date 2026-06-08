@@ -15,15 +15,29 @@ function handler(event) {
   var host = (request.headers.host && request.headers.host.value) || '';
   var label = host.split('.')[0]; // "pr-123" (custom 도메인)
 
-  if (label.indexOf('pr-') !== 0) {
-    // 기본 도메인: 경로 첫 세그먼트에서 pr-<n> 추출
-    var seg = request.uri.split('/'); // "/pr-123/a" -> ["", "pr-123", "a"]
-    if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
-      label = seg[1];
-      var rest = seg.slice(2).join('/');
-      request.uri = rest === '' ? '/' : '/' + rest;
-    }
-  }
+	  if (label.indexOf('pr-') !== 0) {
+	    // 기본 도메인: 경로 첫 세그먼트에서 pr-<n> 추출
+	    var seg = request.uri.split('/'); // "/pr-123/a" -> ["", "pr-123", "a"]
+	    if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
+	      label = seg[1];
+	      var rest = seg.slice(2).join('/');
+	      request.uri = rest === '' ? '/' : '/' + rest;
+	    }
+	  }
+	
+	  if (label.indexOf('pr-') !== 0) {
+	    // Next static export의 asset URL은 기본적으로 /_next/... 절대 경로다.
+	    // CloudFront 기본 도메인 preview(/pr-123/)에서는 asset 요청 URI에 PR 번호가 없으므로
+	    // 같은 문서에서 온 referer를 이용해 PR prefix를 복원한다. 문서 네비게이션이면 URL 자체를
+	    // /pr-<n>/... 로 정규화해 이후 env.json/asset 요청도 preview 컨텍스트를 잃지 않게 한다.
+	    var refererLabel = prLabelFromReferer((request.headers.referer && request.headers.referer.value) || '', host);
+	    if (refererLabel.indexOf('pr-') === 0 && isAllDigits(refererLabel.substring(3))) {
+	      if (isDocumentRequest(request.uri)) {
+	        return redirectToPreviewPath(refererLabel, request.uri, request.querystring);
+	      }
+	      label = refererLabel;
+	    }
+	  }
 
   var number = label.indexOf('pr-') === 0 ? label.substring(3) : '';
   if (!isAllDigits(number)) {
@@ -35,9 +49,9 @@ function handler(event) {
   }
 
   var uri = request.uri;
-  if (uri.endsWith('/')) {
-    uri += 'index.html';
-  } else {
+	  if (endsWithSlash(uri)) {
+	    uri += 'index.html';
+	  } else {
     var last = uri.substring(uri.lastIndexOf('/') + 1);
     if (last.indexOf('.') === -1) {
       uri = '/index.html';
@@ -45,10 +59,91 @@ function handler(event) {
   }
 
   request.uri = '/' + SERVICE + '/' + label + uri;
-  return request;
-}
-
-function isAllDigits(s) {
+	  return request;
+	}
+	
+	function prLabelFromReferer(referer, currentHost) {
+	  var schemeIndex = referer.indexOf('://');
+	  if (schemeIndex !== -1) {
+	    var hostStart = schemeIndex + 3;
+	    var hostEnd = referer.indexOf('/', hostStart);
+	    var host = hostEnd === -1 ? referer.substring(hostStart) : referer.substring(hostStart, hostEnd);
+	    if (host !== currentHost) {
+	      return '';
+	    }
+	    var first = host.split('.')[0];
+	    if (first.indexOf('pr-') === 0) {
+	      return first;
+	    }
+	    if (hostEnd !== -1) {
+	      var path = referer.substring(hostEnd);
+	      if (path.indexOf('/pr-') === 0) {
+	        var end = path.indexOf('/', 1);
+	        return end === -1 ? path.substring(1) : path.substring(1, end);
+	      }
+	    }
+	  }
+	
+	  return '';
+	}
+	
+	function isDocumentRequest(uri) {
+	  if (uri.indexOf('/_next/') === 0) {
+	    return false;
+	  }
+	  if (endsWithSlash(uri)) {
+	    return true;
+	  }
+	  var last = uri.substring(uri.lastIndexOf('/') + 1);
+	  return last.indexOf('.') === -1;
+	}
+	
+	function redirectToPreviewPath(label, uri, querystring) {
+	  var location = '/' + label + uri;
+	  if (location.charAt(location.length - 1) !== '/') {
+	    var last = location.substring(location.lastIndexOf('/') + 1);
+	    if (last.indexOf('.') === -1) {
+	      location += '/';
+	    }
+	  }
+	  location += serializeQuerystring(querystring);
+	  return {
+	    statusCode: 302,
+	    statusDescription: 'Found',
+	    headers: {
+	      location: { value: location }
+	    }
+	  };
+	}
+	
+	function serializeQuerystring(querystring) {
+	  if (!querystring) {
+	    return '';
+	  }
+	  var parts = [];
+	  for (var name in querystring) {
+	    if (!Object.prototype.hasOwnProperty.call(querystring, name)) {
+	      continue;
+	    }
+	    var item = querystring[name];
+	    if (item.multiValue) {
+	      for (var i = 0; i < item.multiValue.length; i++) {
+	        parts.push(name + '=' + item.multiValue[i].value);
+	      }
+	    } else if (item.value === '') {
+	      parts.push(name);
+	    } else {
+	      parts.push(name + '=' + item.value);
+	    }
+	  }
+	  return parts.length === 0 ? '' : '?' + parts.join('&');
+	}
+	
+	function endsWithSlash(s) {
+	  return s.length > 0 && s.charAt(s.length - 1) === '/';
+	}
+	
+	function isAllDigits(s) {
   if (s.length === 0) {
     return false;
   }

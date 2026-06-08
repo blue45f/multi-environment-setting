@@ -31,27 +31,39 @@ aws s3 sync "$SRC" "$DEST/" \
   --exclude "deployment.json" \
   --exclude "*.map"
 
-echo "==> upload HTML / RSC payloads(*.txt) as no-cache"
+echo "==> sync HTML as no-cache"
 # Next App Router static export는 라우트별 RSC 페이로드를 *.txt로 내보낸다(해시 없음).
 # index.html과 함께 항상 재검증해야 클라이언트 네비게이션에서 stale이 발생하지 않는다.
-while IFS= read -r -d '' f; do
-  rel="${f#"$SRC"/}"
-  case "$f" in
-    *.html) ctype="text/html; charset=utf-8" ;;
-    *) ctype="text/plain; charset=utf-8" ;;
-  esac
-  aws s3 cp "$f" "$DEST/$rel" \
-    --cache-control "no-cache,max-age=0" \
-    --content-type "$ctype"
-done < <(find "$SRC" -type f \( -name '*.html' -o -name '*.txt' \) -print0)
+# --delete를 이 no-cache 파일군에도 적용해 PR preview 재배포 시 삭제된 라우트의 stale HTML/RSC를 남기지 않는다.
+aws s3 sync "$SRC" "$DEST/" \
+  --delete \
+  --cache-control "no-cache,max-age=0" \
+  --content-type "text/html; charset=utf-8" \
+  --exclude "*" \
+  --include "*.html"
 
-echo "==> upload runtime config / metadata as no-cache"
-for special in env.json deployment.json; do
-  if [ -f "$SRC/$special" ]; then
-    aws s3 cp "$SRC/$special" "$DEST/$special" \
-      --cache-control "no-cache,max-age=0" \
-      --content-type "application/json"
-  fi
-done
+echo "==> sync RSC payloads(*.txt) as no-cache"
+aws s3 sync "$SRC" "$DEST/" \
+  --delete \
+  --cache-control "no-cache,max-age=0" \
+  --content-type "text/plain; charset=utf-8" \
+  --exclude "*" \
+  --include "*.txt"
+
+echo "==> sync runtime config / metadata as no-cache"
+aws s3 sync "$SRC" "$DEST/" \
+  --delete \
+  --cache-control "no-cache,max-age=0" \
+  --content-type "application/json" \
+  --exclude "*" \
+  --include "env.json" \
+  --include "deployment.json"
+
+echo "==> remove excluded env templates / source maps if present"
+aws s3 rm "$DEST/" \
+  --recursive \
+  --exclude "*" \
+  --include "env.*.json" \
+  --include "*.map"
 
 echo "==> done: $DEST/"

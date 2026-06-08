@@ -26,16 +26,14 @@ resource "aws_cloudfront_function" "preview_router" {
   code    = templatefile("${path.module}/functions/preview-router.js.tftpl", { service = each.key })
 }
 
-data "aws_cloudfront_cache_policy" "caching_optimized" {
-  name = "Managed-CachingOptimized"
-}
-
-data "aws_cloudfront_response_headers_policy" "security_headers" {
-  name = "Managed-SecurityHeadersPolicy"
-}
-
 locals {
   s3_origin_id = "s3-origin"
+
+  # AWS managed CloudFront policy IDs are global and stable. Keeping them as
+  # constants avoids requiring ListCachePolicies/ListResponseHeadersPolicies
+  # permissions just to produce a Terraform plan.
+  cloudfront_cache_policy_caching_optimized_id           = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  cloudfront_response_headers_policy_security_headers_id = "67f7725c-6f97-4210-82d7-5512b31e9d03"
 }
 
 # ── preview distributions (서비스별, 멀티테넌트 pr-*) ───────────────────────
@@ -46,7 +44,7 @@ resource "aws_cloudfront_distribution" "preview" {
   is_ipv6_enabled     = true
   comment             = "${each.key} preview (multi-tenant pr-*)"
   default_root_object = "index.html"
-  price_class         = "PriceClass_200"
+  price_class         = "PriceClass_100"
   aliases             = local.preview_aliases[each.key]
 
   origin {
@@ -61,8 +59,8 @@ resource "aws_cloudfront_distribution" "preview" {
     allowed_methods            = ["GET", "HEAD", "OPTIONS"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
+    cache_policy_id            = local.cloudfront_cache_policy_caching_optimized_id
+    response_headers_policy_id = local.cloudfront_response_headers_policy_security_headers_id
 
     function_association {
       event_type   = "viewer-request"
@@ -92,7 +90,7 @@ resource "aws_cloudfront_distribution" "staging" {
   is_ipv6_enabled     = true
   comment             = "${each.key} staging"
   default_root_object = "index.html"
-  price_class         = "PriceClass_200"
+  price_class         = "PriceClass_100"
   aliases             = local.staging_aliases[each.key]
 
   origin {
@@ -108,8 +106,8 @@ resource "aws_cloudfront_distribution" "staging" {
     allowed_methods            = ["GET", "HEAD", "OPTIONS"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
+    cache_policy_id            = local.cloudfront_cache_policy_caching_optimized_id
+    response_headers_policy_id = local.cloudfront_response_headers_policy_security_headers_id
   }
 
   custom_error_response {
@@ -147,7 +145,7 @@ resource "aws_cloudfront_distribution" "production" {
   is_ipv6_enabled     = true
   comment             = "${each.key} production"
   default_root_object = "index.html"
-  price_class         = "PriceClass_All"
+  price_class         = "PriceClass_100"
   aliases             = local.production_aliases[each.key]
 
   origin {
@@ -163,8 +161,8 @@ resource "aws_cloudfront_distribution" "production" {
     allowed_methods            = ["GET", "HEAD", "OPTIONS"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
+    cache_policy_id            = local.cloudfront_cache_policy_caching_optimized_id
+    response_headers_policy_id = local.cloudfront_response_headers_policy_security_headers_id
   }
 
   custom_error_response {

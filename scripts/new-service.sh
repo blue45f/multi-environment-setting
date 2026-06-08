@@ -6,10 +6,10 @@
 set -euo pipefail
 
 NAME="${1:?usage: new-service.sh <service-name> (소문자/숫자/하이픈)}"
-case "$NAME" in
-  [a-z][a-z0-9-]*) ;;
-  *) echo "서비스명은 소문자로 시작하고 [a-z0-9-]만 허용: '$NAME'" >&2; exit 1 ;;
-esac
+if ! [[ "$NAME" =~ ^[a-z]([a-z0-9-]*[a-z0-9])?$ ]]; then
+  echo "서비스명은 소문자로 시작하고 [a-z0-9-]만 허용하며 하이픈으로 끝날 수 없습니다: '$NAME'" >&2
+  exit 1
+fi
 
 SRC="apps/web"
 DEST="apps/${NAME}"

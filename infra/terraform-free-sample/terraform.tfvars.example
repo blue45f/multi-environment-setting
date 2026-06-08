@@ -1,0 +1,12 @@
+# Lowest-cost browser-accessible AWS sample.
+# This creates one S3 bucket, one tiny index.html object, and S3 static website hosting.
+# CloudFront, GitHub OIDC, Route53, ACM, VPC, NAT, and database resources are intentionally omitted.
+
+aws_region = "ap-northeast-2"
+
+project_name = "multi-env-free-sample"
+
+enable_public_website = true
+
+create_sample_index    = true
+sample_expiration_days = 1

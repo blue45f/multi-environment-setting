@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageFreeSampleBucket",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::multi-env-free-sample-945203151945-ap-northeast-2"
+    },
+    {
+      "Sid": "ManageFreeSampleObjects",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::multi-env-free-sample-945203151945-ap-northeast-2/*"
+    }
+  ]
+}

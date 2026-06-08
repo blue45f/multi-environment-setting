@@ -43,7 +43,7 @@ flowchart TD
 | **asset 403** | ① S3 prefix에 파일이 있는지 ② S3 버킷 정책이 CloudFront OAC(`AWS:SourceArn`)를 허용하는지 ③ 업로드 root 경로 |
 | **API CORS 실패** | ① `env.json`의 `apiBaseUrl` ② API 서버의 allowed origin에 preview 서브도메인 패턴이 있는지 ③ cookie credential 조합 |
 
-> preview 라우팅 원리: 서비스별 CloudFront Function(`preview-router.js.tftpl`, 서비스명 주입)이 `pr-<n>.preview.example.com`(또는 `<cf-domain>/pr-<n>/`)을 S3 `/<service>/pr-<n>/`로 재작성합니다. viewer-request는 캐시 조회 **이전**에 실행되므로, invalidation 경로도 재작성된 `"/<service>/pr-<n>/*"`를 써야 합니다.
+> preview 라우팅 원리: 서비스별 CloudFront Function(`preview-router.js.tftpl`, 서비스명 주입)이 `pr-<n>.preview.example.com`(또는 `<cf-domain>/pr-<n>/`)을 S3 `/<service>/pr-<n>/`로 재작성합니다. CloudFront 기본 도메인 path preview에서는 Next의 root asset(`/_next/...`) 요청이 PR prefix를 잃을 수 있으므로 같은 host의 `Referer` 첫 path segment가 `/pr-<n>/`일 때만 `pr-<n>`을 복원하고, prefix가 빠진 문서 URL은 `/pr-<n>/...`로 정규화합니다. viewer-request는 캐시 조회 **이전**에 실행되므로, invalidation 경로도 재작성된 `"/<service>/pr-<n>/*"`를 써야 합니다.
 
 ---
 

@@ -72,7 +72,7 @@ jobs:
   # ── 2) staging 배포 ───────────────────────────────────────────────────────
   deploy-staging:
     needs: build
-    if: ${{ vars.DEPLOY_CONFIG != '' && (github.event_name == 'push' || inputs.target == 'staging') }}
+    if: ${{ vars.DEPLOY_CONFIG != '' && (github.event_name == 'push' || inputs.target == 'staging' || inputs.target == 'production') }}
     strategy:
       fail-fast: false
       matrix:
@@ -93,9 +93,19 @@ jobs:
       - name: Unpack + select runtime config
         run: |
           sha256sum -c app.tar.gz.sha256
+          ARTIFACT_SHA256="$(cut -d ' ' -f1 app.tar.gz.sha256)"
           mkdir -p "${OUTPUT_DIR}"
           tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
           cp "${APP_DIR}/public/env.staging.json" "${OUTPUT_DIR}/env.json"
+          cat > "${OUTPUT_DIR}/deployment.json" <<EOF
+          {
+            "service": "${SERVICE}",
+            "environment": "staging",
+            "sourceRevision": "${GITHUB_SHA}",
+            "artifactSha256": "${ARTIFACT_SHA256}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
       - name: Configure AWS credentials (OIDC, staging role)
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -148,9 +158,19 @@ jobs:
       - name: Unpack + select runtime config
         run: |
           sha256sum -c app.tar.gz.sha256
+          ARTIFACT_SHA256="$(cut -d ' ' -f1 app.tar.gz.sha256)"
           mkdir -p "${OUTPUT_DIR}"
           tar -xzf app.tar.gz -C "${OUTPUT_DIR}"
           cp "${APP_DIR}/public/env.production.json" "${OUTPUT_DIR}/env.json"
+          cat > "${OUTPUT_DIR}/deployment.json" <<EOF
+          {
+            "service": "${SERVICE}",
+            "environment": "production",
+            "sourceRevision": "${GITHUB_SHA}",
+            "artifactSha256": "${ARTIFACT_SHA256}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
       - name: Configure AWS credentials (OIDC, production role)
         uses: aws-actions/configure-aws-credentials@v6
         with:

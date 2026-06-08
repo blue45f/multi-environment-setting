@@ -77,10 +77,15 @@ output "deploy_config" {
       cleanup_role_arn             = aws_iam_role.cleanup[s].arn
       preview_distribution_id      = aws_cloudfront_distribution.preview[s].id
       staging_distribution_id      = aws_cloudfront_distribution.staging[s].id
-      production_distribution_id   = aws_cloudfront_distribution.production[s].id
-      preview_cloudfront_domain    = aws_cloudfront_distribution.preview[s].domain_name
-      staging_cloudfront_domain    = aws_cloudfront_distribution.staging[s].domain_name
-      production_cloudfront_domain = aws_cloudfront_distribution.production[s].domain_name
-    }
-  }
-}
+	      production_distribution_id   = aws_cloudfront_distribution.production[s].id
+	      preview_cloudfront_domain    = aws_cloudfront_distribution.preview[s].domain_name
+	      staging_cloudfront_domain    = aws_cloudfront_distribution.staging[s].domain_name
+	      production_cloudfront_domain = aws_cloudfront_distribution.production[s].domain_name
+	      preview_url_template = (
+	        local.use_custom_domain && s == local.primary_service
+	        ? "https://pr-{pr}.${var.preview_subdomain}.${var.apex_domain}/"
+	        : "https://${aws_cloudfront_distribution.preview[s].domain_name}/pr-{pr}/"
+	      )
+	    }
+	  }
+	}

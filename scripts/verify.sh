@@ -30,7 +30,8 @@ fi
 
 echo "════ terraform validate ════"
 if command -v terraform >/dev/null 2>&1; then
-  terraform -chdir=infra/terraform validate || fail=1
+  terraform -chdir=infra/terraform init -backend=false -input=false &&
+    terraform -chdir=infra/terraform validate || fail=1
 else
   echo "terraform 미설치 — 건너뜀 (CI validate.yml에서 검사됨)"
 fi

@@ -66,8 +66,11 @@ sweep() {
 
   aws s3 ls "s3://${ARTIFACT_BUCKET}/${SERVICE_NAME}/" \
     | awk '{print $2}' | grep -E '^pr-[0-9]+/$' > "$REPORT_DIR/s3-prefixes.txt" || true
-  gh api "repos/${GH_REPO}/pulls?state=open&per_page=100" --paginate --jq '.[].number' \
-    > "$REPORT_DIR/open-prs.txt" 2>/dev/null || : > "$REPORT_DIR/open-prs.txt"
+  if ! gh api "repos/${GH_REPO}/pulls?state=open&per_page=100" --paginate --jq '.[].number' \
+    > "$REPORT_DIR/open-prs.txt" 2> "$REPORT_DIR/github-open-prs-error.log"; then
+    echo "GitHub open PR 목록 조회 실패 — 안전을 위해 sweep 삭제를 중단합니다." >&2
+    exit 1
+  fi
   : > "$REPORT_DIR/candidates.txt"
 
   echo "==> sweep (dry_run=${dry_run}, grace_days=${grace_days}, max_deletions=${max_del})"
@@ -82,7 +85,14 @@ sweep() {
     fi
 
     # closed 후 경과일 확인 (grace period)
-    closed_at="$(gh api "repos/${GH_REPO}/pulls/${num}" --jq '.closed_at // empty' 2>/dev/null || echo "")"
+    if ! closed_at="$(gh api "repos/${GH_REPO}/pulls/${num}" --jq '.closed_at // empty' 2> "$REPORT_DIR/github-pr-${num}-error.log")"; then
+      echo "skip pr-${num}: GitHub PR 상태 조회 실패" >&2
+      continue
+    fi
+    if [ -z "$closed_at" ]; then
+      echo "skip pr-${num}: closed_at 없음 (상태 불명)"
+      continue
+    fi
     if [ -n "$closed_at" ]; then
       closed_epoch="$(epoch_of "$closed_at")"
       if [ -n "$closed_epoch" ]; then
