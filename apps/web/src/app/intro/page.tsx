@@ -14,7 +14,8 @@ const environmentModes = [
     route: '/staging/current/',
     owner: 'QA + 릴리즈 담당자',
     trigger: 'main merge 후 자동 배포',
-    purpose: '프로덕션 전 최종 검증 환경으로 실제 배포 절차를 흉내 내어 기능/권한/로그 추적을 검증합니다.',
+    purpose:
+      '프로덕션 전 최종 검증 환경으로 실제 배포 절차를 흉내 내어 기능/권한/로그 추적을 검증합니다.',
     checks: ['staging API', '실제 인증 플로우', '릴리스 체크리스트'],
   },
   {
@@ -38,28 +39,32 @@ const architectureFlow = [
   {
     phase: '2',
     title: '정적 산출물 빌드',
-    detail: 'Next 앱을 static export로 빌드해 동일한 `out/` 번들을 만든 뒤, 앱 로직은 환경별로 분기하지 않습니다.',
+    detail:
+      'Next 앱을 static export로 빌드해 동일한 `out/` 번들을 만든 뒤, 앱 로직은 환경별로 분기하지 않습니다.',
     role: '빌드 시스템',
     output: '공통 artifact',
   },
   {
     phase: '3',
     title: '런타임 설정 주입',
-    detail: '배포 위치마다 `env.json`만 바꿔 API URL, Sentry 환경명, feature flag key를 덧씌웁니다.',
+    detail:
+      '배포 위치마다 `env.json`만 바꿔 API URL, Sentry 환경명, feature flag key를 덧씌웁니다.',
     role: 'CDN/호스팅',
     output: 'stage별 runtime config',
   },
   {
     phase: '4',
     title: '환경별 라우트',
-    detail: 'prefix 기반 URL(예: `/pr-123`, `/staging/current`)로 서로 다른 환경을 같은 앱 코드에서 분리 운영합니다.',
+    detail:
+      'prefix 기반 URL(예: `/pr-123`, `/staging/current`)로 서로 다른 환경을 같은 앱 코드에서 분리 운영합니다.',
     role: 'CloudFront/Vercel/S3',
     output: '환경 경계 확보',
   },
   {
     phase: '5',
     title: '검증 → 승인 → 승격',
-    detail: '각 환경에서 통과한 뒤 다음 단계로 넘어가며, 운영은 수동 승인 또는 보호 규칙으로 안전하게 전환합니다.',
+    detail:
+      '각 환경에서 통과한 뒤 다음 단계로 넘어가며, 운영은 수동 승인 또는 보호 규칙으로 안전하게 전환합니다.',
     role: 'QA/운영',
     output: '롤백 가능한 배포 이력',
   },
@@ -93,14 +98,41 @@ const principles = [
 ];
 
 const glossary = [
-  { term: 'Artifact(아티팩트)', definition: '빌드 결과물. 코드 번들, 정적 파일, 이미지, 맵 파일 등을 한 번에 묶은 산출물입니다.' },
-  { term: 'Runtime config', definition: '앱 시작 시 로드하는 실행 환경 설정. 본 데모의 `env.json`이 대표적입니다.' },
-  { term: 'Prefix', definition: 'S3/Vercel 경로에 환경별 폴더를 나누는 방식입니다. 충돌을 막고 정리 용이를 돕습니다.' },
-  { term: 'Protected environment', definition: 'production처럼 민감한 배포를 승인 절차와 보호 규칙으로 제한하는 방식입니다.' },
-  { term: 'Rollback', definition: '문제 생기면 이전 버전 prefix나 설정으로 즉시 되돌리는 운영 행위입니다.' },
-  { term: 'Lifecycle', definition: '스토리지 오브젝트의 수명 정책. 오래된 객체를 자동 삭제해 비용을 낮추는 장치입니다.' },
-  { term: 'Static export', definition: '서버가 아니라 HTML/CSS/JS 정적 파일만 배포하는 방식. 이 샘플의 핵심입니다.' },
-  { term: 'CDN', definition: '정적 파일을 지역 캐시로 빠르게 전달해 지연을 줄이는 네트워크 레이어입니다.' },
+  {
+    term: 'Artifact(아티팩트)',
+    definition:
+      '빌드 결과물. 코드 번들, 정적 파일, 이미지, 맵 파일 등을 한 번에 묶은 산출물입니다.',
+  },
+  {
+    term: 'Runtime config',
+    definition: '앱 시작 시 로드하는 실행 환경 설정. 본 데모의 `env.json`이 대표적입니다.',
+  },
+  {
+    term: 'Prefix',
+    definition:
+      'S3/Vercel 경로에 환경별 폴더를 나누는 방식입니다. 충돌을 막고 정리 용이를 돕습니다.',
+  },
+  {
+    term: 'Protected environment',
+    definition: 'production처럼 민감한 배포를 승인 절차와 보호 규칙으로 제한하는 방식입니다.',
+  },
+  {
+    term: 'Rollback',
+    definition: '문제 생기면 이전 버전 prefix나 설정으로 즉시 되돌리는 운영 행위입니다.',
+  },
+  {
+    term: 'Lifecycle',
+    definition:
+      '스토리지 오브젝트의 수명 정책. 오래된 객체를 자동 삭제해 비용을 낮추는 장치입니다.',
+  },
+  {
+    term: 'Static export',
+    definition: '서버가 아니라 HTML/CSS/JS 정적 파일만 배포하는 방식. 이 샘플의 핵심입니다.',
+  },
+  {
+    term: 'CDN',
+    definition: '정적 파일을 지역 캐시로 빠르게 전달해 지연을 줄이는 네트워크 레이어입니다.',
+  },
 ];
 
 const usageCommands = [
@@ -117,7 +149,7 @@ const usageCommands = [
   {
     title: 'S3 무료 샘플 업로드',
     command:
-      'AWS_PROFILE=multi-env-free-sample aws s3 sync out s3://multi-env-free-sample-945203151945-ap-northeast-2/ --delete --cache-control \'no-cache, no-store, must-revalidate\'',
+      "AWS_PROFILE=multi-env-free-sample aws s3 sync out s3://multi-env-free-sample-945203151945-ap-northeast-2/ --delete --cache-control 'no-cache, no-store, must-revalidate'",
     note: 'CloudFront 없이도 접속 가능한 저비용 공유용 경로입니다. 운영 전환 시 HTTPS가 필요하면 CloudFront를 붙입니다.',
   },
   {
@@ -149,7 +181,8 @@ const walkthrough = [
 
 export const metadata = {
   title: '멀티 환경 안내 페이지 · 시작부터 운영까지',
-  description: 'Preview, staging, production이 어떻게 분리되고 비용 효율적으로 운영되는지 초보자 관점의 아키텍처 가이드',
+  description:
+    'Preview, staging, production이 어떻게 분리되고 비용 효율적으로 운영되는지 초보자 관점의 아키텍처 가이드',
 };
 
 export default function IntroPage() {
@@ -165,9 +198,9 @@ export default function IntroPage() {
             <p className="eyebrow">멀티 환경 도시 가이드</p>
             <h1 id="intro-title">멀티 개발환경, 초보자도 한 번에 이해하는 지도형 설명</h1>
             <p>
-              이 페이지는 팀 onboarding에 바로 사용할 수 있도록 구성한 실전 예시입니다.
-              코드와 배포 파이프라인은 가급적 단순하게 유지하고,
-              운영은 환경별 설정(`env.json`)을 분리해 제어하는 방식으로 설명합니다.
+              이 페이지는 팀 onboarding에 바로 사용할 수 있도록 구성한 실전 예시입니다. 코드와 배포
+              파이프라인은 가급적 단순하게 유지하고, 운영은 환경별 설정(`env.json`)을 분리해
+              제어하는 방식으로 설명합니다.
             </p>
           </div>
 
@@ -198,8 +231,8 @@ export default function IntroPage() {
           <h2 id="city-title">아키텍처 도시화: 데이터가 도로를 따라 흐르는 방식</h2>
         </div>
         <p className="guide-city__intro">
-          배포를 이해할 때 가장 쉬운 질문은 “누가 뭘 바꾸는가”입니다. 이 샘플은 항상 같은 앱을 만들고,
-          도로(환경 경로)와 신호등(권한/승인 단계)만 바꿔 다루는 방식입니다.
+          배포를 이해할 때 가장 쉬운 질문은 “누가 뭘 바꾸는가”입니다. 이 샘플은 항상 같은 앱을
+          만들고, 도로(환경 경로)와 신호등(권한/승인 단계)만 바꿔 다루는 방식입니다.
         </p>
 
         <ol className="city-map" aria-label="멀티 환경 흐름 지도">
@@ -221,7 +254,8 @@ export default function IntroPage() {
         </ol>
 
         <p className="guide-city__caption">
-          한 줄 요약: 빌드 아티팩트는 유지하고, 환경 경계는 `env.json` + prefix + 승인 흐름으로 바꾼다.
+          한 줄 요약: 빌드 아티팩트는 유지하고, 환경 경계는 `env.json` + prefix + 승인 흐름으로
+          바꾼다.
         </p>
       </section>
 
@@ -312,8 +346,8 @@ export default function IntroPage() {
           <p className="eyebrow">Runbook</p>
           <h2 id="usage-title">직접 실행할 때 쓰는 명령</h2>
           <p>
-            로컬 개발은 `apps/web`에서 실행하고, AWS 샘플은 전용 `multi-env-free-sample` 프로필만 사용합니다.
-            다른 서비스 계정(예: `termsdesk-deploy`)은 사용하지 않습니다.
+            로컬 개발은 `apps/web`에서 실행하고, AWS 샘플은 전용 `multi-env-free-sample` 프로필만
+            사용합니다. 다른 서비스 계정(예: `termsdesk-deploy`)은 사용하지 않습니다.
           </p>
         </div>
 
@@ -339,22 +373,22 @@ export default function IntroPage() {
           <article>
             <h3>Vercel preview</h3>
             <p>
-              팀 리뷰용 빠른 공유 URL에 가장 강합니다. 다만 팀 보안 설정(요청 시 protection)
-              과 무료 플랜 배포 한도는 반드시 확인해야 합니다.
+              팀 리뷰용 빠른 공유 URL에 가장 강합니다. 다만 팀 보안 설정(요청 시 protection) 과 무료
+              플랜 배포 한도는 반드시 확인해야 합니다.
             </p>
           </article>
           <article>
             <h3>AWS S3 정적</h3>
             <p>
-              CloudFront 없이도 가장 저렴하고 단순하게 테스트 가능합니다.
-              HTTPS가 필요하거나 캐시 정책이 중요하면 CloudFront를 추가하세요.
+              CloudFront 없이도 가장 저렴하고 단순하게 테스트 가능합니다. HTTPS가 필요하거나 캐시
+              정책이 중요하면 CloudFront를 추가하세요.
             </p>
           </article>
           <article>
             <h3>실제 운영</h3>
             <p>
-              운영 전환에는 protected environments, PR 승인 게이트, cleanup workflow,
-              IAM 최소 권한, 모니터링 관측 지점까지 함께 구성합니다.
+              운영 전환에는 protected environments, PR 승인 게이트, cleanup workflow, IAM 최소 권한,
+              모니터링 관측 지점까지 함께 구성합니다.
             </p>
           </article>
         </div>
