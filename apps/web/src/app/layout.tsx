@@ -1,8 +1,10 @@
+import PwaRegister from './PwaRegister';
 import type { ReactNode } from 'react';
 
 import './globals.css';
 
 export const metadata = {
+  manifest: '/manifest.webmanifest',
   title: 'Multi-Environment Demo',
   description: '다중 개발 서버 레퍼런스 예제 앱',
 };
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <a className="skip-link" href="#content">
           본문으로 건너뛰기
         </a>
+        <PwaRegister />
         {children}
       </body>
     </html>
