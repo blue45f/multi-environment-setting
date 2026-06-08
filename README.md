@@ -301,3 +301,29 @@ SSR / API Routes / Middleware 필요?
 - 필요 시 `docs/`의 runbook 또는 운영 체크리스트에 `route rewrite`, `deploy lock`, `rollback` 항목을 추가하면 운영 관점 추적성이 더 좋아집니다.
 
 이 기록은 향후 회고/리뷰/운영 인수인계를 위한 기준선으로 사용합니다.
+
+## 10. 운영 접속 포인트 / 점검 체크리스트 (최신)
+
+### 현재 공개 URL (기준)
+- Vercel 공개 URL: `https://web-blond-nine-45.vercel.app`
+- Vercel 소개 페이지: `https://web-blond-nine-45.vercel.app/intro/`
+- Vercel 런타임 설정: `https://web-blond-nine-45.vercel.app/env.json`
+- S3 샘플 URL: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/`
+- S3 소개 페이지: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/intro/`
+- S3 런타임 설정: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/env.json`
+
+### 배포 후 3개 최소 점검
+- `/intro/` 200 확인: `curl -I -L <대상 URL>/intro/`
+- `/env.json` 200 확인: `curl -I -L <대상 URL>/env.json`
+- 루트 홈 200 확인: `curl -I -L <대상 URL>/`
+
+### 확인 순서 (문제 발생 시)
+1. Vercel/alias 상태 확인
+2. `/env.json` 응답 상태와 내용 확인
+3. 필요 시 S3 sync 재실행 후 Vercel 재배포
+4. Vercel Protection 설정(SSO/password/fork protection) 일시 해제 여부 확인
+
+### 비용 운영 가이드 반영 원칙
+- 샘플 데모는 우선 무료/저비용 구성으로 유지: S3 정적 산출물, 최소 IAM 권한, Lifecycle 정리
+- 운영 전환 전에는 CloudFront/정식 도메인/승격 워크플로를 단계적으로 도입
+
