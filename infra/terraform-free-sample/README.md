@@ -4,15 +4,51 @@ This directory contains the smallest browser-accessible AWS sample in this repos
 
 ## Current status
 
-The sample is configured for S3 static website hosting.
+The sample is currently deployed as the browser-accessible AWS fallback for the demo app.
 
 ```hcl
 aws_region = "ap-northeast-2"
 project_name = "multi-env-free-sample"
 enable_public_website = true
-create_sample_index = true
+create_sample_index = false
 sample_expiration_days = 1
 ```
+
+Live sample URL:
+
+```text
+http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com
+```
+
+Additional demo page:
+
+```text
+http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/intro/
+```
+
+The deployed content is the static export from `apps/web/out`, generated with:
+
+```sh
+pnpm --dir apps/web build
+AWS_PROFILE=multi-env-free-sample aws s3 sync apps/web/out s3://multi-env-free-sample-945203151945-ap-northeast-2/ --delete --cache-control "no-cache, no-store, must-revalidate"
+```
+
+Deployment check on 2026-06-08:
+
+```text
+/       -> HTTP 200
+/intro/ -> HTTP 200
+```
+
+Vercel was attempted first, but the available URL was not usable:
+
+```text
+https://web-blond-nine-45.vercel.app/ -> 404 DEPLOYMENT_NOT_FOUND
+https://web-qa27gjx7p-blue45fs-projects.vercel.app -> 401 / deployment status Error
+Preview redeploy blocked by Vercel free-plan API deployment limit: api-deployments-free-per-day
+```
+
+Because of that limit, the AWS S3 website endpoint is the active low-cost sample URL for now.
 
 A previous apply with `termsdesk-deploy` failed because that user is for another service and does not have S3/IAM permissions for this sample.
 
@@ -109,7 +145,7 @@ Terraform will output `website_url` after a successful apply.
 This sample creates only:
 
 - One S3 bucket
-- One tiny `index.html` object
+- Static demo objects uploaded from `apps/web/out`
 - S3 static website configuration
 - Public-read bucket policy for sample objects
 - S3 public access block adjusted to allow that bucket policy
@@ -135,7 +171,7 @@ Cost-control choices:
 - `sample_expiration_days = 1` removes objects quickly.
 - `force_destroy = true` allows `terraform destroy` to delete the bucket even when it contains sample objects.
 - No CloudFront resources are created, so there is no CDN request/data-transfer surface from this sample.
-- Only one tiny HTML object is uploaded.
+- The uploaded static export is about 1 MiB, so storage cost is negligible for this short-lived sample.
 
 ## Public website note
 
@@ -177,7 +213,7 @@ Use `infra/terraform-free-sample` when the goal is minimal AWS cost and browser-
 
 Use `infra/terraform` when the goal is the full architecture with CloudFront preview/staging/production distributions and GitHub Actions roles.
 
-## Cleanup completed
+## Previous cleanup record
 
 The temporary sample has been destroyed after validation.
 
@@ -189,6 +225,6 @@ Deleted inline policy: MultiEnvFreeSampleS3Access
 Cleared local AWS profile values: multi-env-free-sample
 ```
 
-The previously generated S3 website URL is no longer expected to serve the sample page.
+That cleanup record is historical. The sample was recreated on 2026-06-08 for the current live demo URL above.
 
-Delete or rotate the root access key used for bootstrap/cleanup in the AWS Console.
+Delete or rotate the root access key used for bootstrap/cleanup in the AWS Console when the sample is no longer needed.
