@@ -20,6 +20,8 @@ test-results/
 # dev.sh/e2e-local.sh가 생성하는 로컬 런타임 config (env.<stage>.json 템플릿만 커밋)
 # 모든 서비스(apps/<name>)에 적용
 apps/*/public/env.json
+# Vercel/static demo fallback: 공개 preview 값만 담긴 기본 런타임 config
+!apps/web/public/env.json
 rootkey.csv
 
 # terraform
