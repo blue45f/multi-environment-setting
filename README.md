@@ -216,6 +216,8 @@ make e2e-local ENV=staging      # build → out/ 정적 서빙 → Playwright sm
 make verify                     # 모든 apps/* 검증 + (설치 시) shellcheck·terraform validate
 ```
 
+로컬 서버를 열면 `/`는 현재 `env.json`이 어떤 환경값을 주입했는지 보여주는 데모 워크벤치로 동작합니다. `/intro`는 preview → staging → production 흐름, S3 prefix, CloudFront routing, runtime config 역할을 한 장의 소개 페이지로 설명합니다.
+
 `make bootstrap`(실제 AWS 생성)은 계정이 준비되면 그때 실행하면 됩니다. CI의 `validate.yml`도 AWS 없이 통과합니다.
 
 ### 성능 회귀 가드 (Core Web Vitals smoke)
