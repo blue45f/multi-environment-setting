@@ -97,17 +97,17 @@ jobs:
             --source-url-type BUCKET_PREFIX \
             --source-url "s3://${{ vars.ARTIFACT_BUCKET }}/${SERVICE}/pr-${PR}/"
 
-	      - name: Compute preview URL
-	        id: url
-	        env:
-	          PREVIEW_URL_TEMPLATE: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_url_template }}
-	          PREVIEW_CLOUDFRONT_DOMAIN: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_cloudfront_domain }}
-	        run: |
-	          template="$PREVIEW_URL_TEMPLATE"
-	          if [ -z "$template" ]; then
-	            template="https://${PREVIEW_CLOUDFRONT_DOMAIN}/pr-{pr}/"
-	          fi
-	          echo "url=${template//\{pr\}/${PR}}" >> "$GITHUB_OUTPUT"
+      - name: Compute preview URL
+        id: url
+        env:
+          PREVIEW_URL_TEMPLATE: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_url_template }}
+          PREVIEW_CLOUDFRONT_DOMAIN: ${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].preview_cloudfront_domain }}
+        run: |
+          template="$PREVIEW_URL_TEMPLATE"
+          if [ -z "$template" ]; then
+            template="https://${PREVIEW_CLOUDFRONT_DOMAIN}/pr-{pr}/"
+          fi
+          echo "url=${template//\{pr\}/${PR}}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for URL
         run: |
