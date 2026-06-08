@@ -269,3 +269,35 @@ SSR / API Routes / Middleware 필요?
 - [docs/SETUP.md](docs/SETUP.md) — AWS 0→1 구축 순서
 - [docs/runbooks/frontend-preview.md](docs/runbooks/frontend-preview.md) — 장애/rollback runbook
 - [infra/terraform/README.md](infra/terraform/README.md) — Terraform 사용법
+
+## 9. 최근 배포/개선 로그 (2026-06-08 기준)
+
+최근 데모 목적의 소개 페이지를 다음 기준으로 고도화했습니다.
+
+1) 소개 페이지 완전 리라이팅
+- `/intro`를 초보자 onboarding 관점으로 재설계했습니다.
+- 아키텍처 흐름을 단계별로 도식화(`1~5` 단계)해 코드 변경 → 정적 빌드 → runtime 설정 주입 → 환경별 라우팅 순서를 한 눈에 파악할 수 있게 구성했습니다.
+- 환경 운영 원칙(`빌드 분리 없음`, `설정 분리`, `승격/rollback 경계`, `비용 관리`)을 원칙 카드로 정리했습니다.
+- 용어사전(Artifact/Runtime config/Prefix/Protected environment/Lifecycle 등)을 추가해 초보자도 낯선 용어를 바로 이해할 수 있게 했습니다.
+- 모바일/테블릿/데스크톱 반응형 규칙을 강화해 텍스트 가독성과 카드 레이아웃이 화면 폭에 맞게 바뀌도록 조정했습니다.
+
+2) CSS 및 UX 정비
+- `apps/web/src/app/globals.css`에 소개 페이지 전용 레이아웃과 반응형 블록을 추가했습니다.
+- 애니메이션은 진입 페이드/업 방식으로 최소화해 과장되지 않게 정보 밀도는 유지하고 가독성을 우선시했습니다.
+- 색/여백/타이포를 기존 디자인 토큰(`--app-*`) 위에 일관성 있게 정렬했습니다.
+
+3) 샘플 배포 반영
+- 빌드 결과를 최신으로 생성하고 S3 샘플 버킷에 sync했습니다.
+  - 빌드: `pnpm --filter web build`
+  - 동기화: `AWS_PROFILE=multi-env-free-sample aws s3 sync out s3://multi-env-free-sample-945203151945-ap-northeast-2/ --delete --cache-control 'no-cache, no-store, must-revalidate'`
+- S3 샘플 확인 경로:
+  - 데모 홈: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/`
+  - 소개 페이지: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/intro/`
+  - 런타임 설정: `http://multi-env-free-sample-945203151945-ap-northeast-2.s3-website.ap-northeast-2.amazonaws.com/env.json`
+
+4) 운영 노트
+- Vercel 무료 플랜에서는 배포 횟수 제한이 있어 재배포가 실패할 수 있어, 현재는 비용이 가장 낮은 S3 경로를 기준으로 샘플을 유지하고 있습니다.
+- `/env.json` 404 이슈는 Vercel 재배포 없이도 라우팅 rewrite로 해결했으며, 장기적으로는 배포 파이프라인에서 env.json 동기화 단계를 보장하는 것을 권장합니다.
+- 필요 시 `docs/`의 runbook 또는 운영 체크리스트에 `route rewrite`, `deploy lock`, `rollback` 항목을 추가하면 운영 관점 추적성이 더 좋아집니다.
+
+이 기록은 향후 회고/리뷰/운영 인수인계를 위한 기준선으로 사용합니다.
