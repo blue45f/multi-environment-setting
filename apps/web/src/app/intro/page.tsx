@@ -123,7 +123,7 @@ const usageCommands = [
   {
     title: '환경 설정 확인',
     command:
-      'curl https://web-brbgkgb2e-blue45fs-projects.vercel.app/env.json && curl https://web-brbgkgb2e-blue45fs-projects.vercel.app/intro/',
+      'curl https://web-blond-nine-45.vercel.app/env.json && curl https://web-blond-nine-45.vercel.app/intro/',
     note: '`/env.json`을 먼저 확인하면 화면 상단의 환경 상태 텍스트가 어떻게 채워지는지 이해할 수 있습니다.',
   },
 ];

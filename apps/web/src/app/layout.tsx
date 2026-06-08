@@ -15,6 +15,12 @@ export const metadata = {
 // 이 스크립트는 깜빡임(light→dark 점프)만 막는 역할이다.
 const noFoucScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
+const LEGAL_LINKS = {
+  terms: 'https://termsdesk.vercel.app/p/multi-environment-setting/terms-of-service',
+  privacy: 'https://termsdesk.vercel.app/p/multi-environment-setting/privacy-policy',
+  support: 'https://termsdesk.vercel.app/support/multi-environment-setting',
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
@@ -27,6 +33,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <PwaRegister />
         {children}
+        <footer className="global-site-footer" aria-label="법적 고지">
+          <nav>
+            <a href={LEGAL_LINKS.terms} target="_blank" rel="noreferrer">
+              이용약관
+            </a>
+            <a href={LEGAL_LINKS.privacy} target="_blank" rel="noreferrer">
+              개인정보처리방침
+            </a>
+            <a href={LEGAL_LINKS.support} target="_blank" rel="noreferrer">
+              지원
+            </a>
+          </nav>
+          <p>Multi Environment Setting · TermsDesk 포트폴리오</p>
+        </footer>
       </body>
     </html>
   );

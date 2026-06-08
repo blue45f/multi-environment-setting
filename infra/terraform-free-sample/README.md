@@ -40,15 +40,16 @@ Deployment check on 2026-06-08:
 /intro/ -> HTTP 200
 ```
 
-Vercel was attempted first, but the available URL was not usable:
+Vercel was attempted first, but earlier attempts were not immediately usable due to routing/protection issues. The current stable route is now available via the project route below:
 
 ```text
-https://web-blond-nine-45.vercel.app/ -> 404 DEPLOYMENT_NOT_FOUND
-https://web-qa27gjx7p-blue45fs-projects.vercel.app -> 401 / deployment status Error
-Preview redeploy blocked by Vercel free-plan API deployment limit: api-deployments-free-per-day
+https://web-blond-nine-45.vercel.app/ -> HTTP 200
+https://web-blond-nine-45.vercel.app/intro/ -> HTTP 200
+https://web-blond-nine-45.vercel.app/env.json -> HTTP 200
+https://multi-environment-setting-n9yh45l2m-blue45fs-projects.vercel.app/ -> archived/legacy test deployment
 ```
 
-Because of that limit, the AWS S3 website endpoint is the active low-cost sample URL for now.
+The AWS S3 website endpoint remains the low-cost sample URL and is still kept in sync for lightweight checks.
 
 A previous apply with `termsdesk-deploy` failed because that user is for another service and does not have S3/IAM permissions for this sample.
 

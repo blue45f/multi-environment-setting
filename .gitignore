@@ -44,3 +44,4 @@ infra/terraform/backend.hcl
 .idea/
 .vscode/
 *.log
+.vercel
