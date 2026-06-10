@@ -202,12 +202,12 @@ export default function Home() {
               배포 경로를 설명합니다.
             </p>
             <div className="hero-actions" aria-label="다음 행동">
-              <a className="primary-action" href="#runtime">
+              <Link className="primary-action" href="/intro">
+                아키텍처 가이드 읽기
+              </Link>
+              <a className="secondary-action" href="#runtime">
                 현재 환경 확인
               </a>
-              <Link className="secondary-action" href="/intro">
-                아키텍처 소개 보기
-              </Link>
             </div>
           </div>
 

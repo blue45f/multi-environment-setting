@@ -5,8 +5,9 @@ import './globals.css';
 
 export const metadata = {
   manifest: '/manifest.webmanifest',
-  title: 'Multi-Environment Demo',
-  description: '다중 개발 서버 레퍼런스 예제 앱',
+  title: 'Multi-Environment Demo — Build once · Deploy many 멀티환경 레퍼런스',
+  description:
+    'PR마다 격리된 preview, staging 검증, production 승격까지 — 한 번 빌드한 정적 산출물에 env.json만 갈아끼워 배포하는 S3+CloudFront·GitHub OIDC 멀티환경 레퍼런스',
 };
 
 // no-FOUC pre-paint: 첫 페인트 전에 저장된 테마 선호를 <html data-theme>에 박는다.
