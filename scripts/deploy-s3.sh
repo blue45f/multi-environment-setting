@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 정적 산출물을 S3에 업로드한다. cache-control을 파일 종류별로 분리한다. (가이드 §7.2)
 #   - HTML            : no-cache (release entry가 자주 바뀜)
+#   - robots.txt/sitemap.xml : no-cache (SEO 산출물, 해시 없음)
 #   - env.json / deployment.json : no-cache (runtime config / 메타)
 #   - env.<stage>.json 템플릿 : 업로드하지 않음 (preview/staging/production 값 분리)
 #   - *.map           : 업로드하지 않음 (source map 노출 금지)
@@ -20,12 +21,13 @@ if [ ! -d "$SRC" ]; then
 fi
 
 echo "==> sync immutable assets: $SRC -> $DEST/"
-# 해시가 박힌 자산만 길게 캐시한다. 해시가 없는 entry/RSC 페이로드/config는 제외하고 아래에서 no-cache로 올린다.
+# 해시가 박힌 자산만 길게 캐시한다. 해시가 없는 entry/RSC 페이로드/SEO 산출물/config는 제외하고 아래에서 no-cache로 올린다.
 aws s3 sync "$SRC" "$DEST/" \
   --delete \
   --cache-control "public,max-age=31536000,immutable" \
   --exclude "*.html" \
   --exclude "*.txt" \
+  --exclude "sitemap.xml" \
   --exclude "env.json" \
   --exclude "env.*.json" \
   --exclude "deployment.json" \
@@ -43,12 +45,23 @@ aws s3 sync "$SRC" "$DEST/" \
   --include "*.html"
 
 echo "==> sync RSC payloads(*.txt) as no-cache"
+# robots.txt(해시 없는 SEO 산출물)도 *.txt 패턴으로 이 패스에 함께 올라간다 — 의도된 동작.
+# text/plain은 robots.txt에 올바른 content-type이고, no-cache도 정확히 원하는 정책이다.
 aws s3 sync "$SRC" "$DEST/" \
   --delete \
   --cache-control "no-cache,max-age=0" \
   --content-type "text/plain; charset=utf-8" \
   --exclude "*" \
   --include "*.txt"
+
+echo "==> sync sitemap.xml as no-cache"
+# sitemap.xml은 해시 없는 SEO 산출물 — 위 immutable 패스에서 제외하고 여기서 application/xml로 올린다.
+aws s3 sync "$SRC" "$DEST/" \
+  --delete \
+  --cache-control "no-cache,max-age=0" \
+  --content-type "application/xml" \
+  --exclude "*" \
+  --include "sitemap.xml"
 
 echo "==> sync runtime config / metadata as no-cache"
 aws s3 sync "$SRC" "$DEST/" \
