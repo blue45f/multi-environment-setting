@@ -192,6 +192,7 @@ code,
   border: 1px solid var(--app-line);
   border-radius: 999px;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     color 160ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -291,8 +292,11 @@ code,
   z-index: 1;
 }
 
+/* 3존(브랜드/링크/토글) 헤더 — 641~920px 단일행 구간에서 폭이 모자라면 항목을
+   통째로 다음 줄로 내린다(graceful wrap). 라벨 자체는 nowrap이라 절대 접히지 않는다. */
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -314,6 +318,7 @@ code,
   gap: 10px;
   font-weight: 800;
   letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .brand-chip__grid {
@@ -329,11 +334,13 @@ code,
 
 .topbar__links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: clamp(10px, 2vw, 22px);
   font-size: 14px;
   font-weight: 700;
   color: var(--app-ink-muted);
+  white-space: nowrap; /* 한글 라벨(런타임 값 등)이 음절 중간에서 두 줄로 접히지 않게 */
 }
 
 .topbar__links a:hover,
@@ -456,6 +463,13 @@ code,
   font-size: clamp(22px, 2.5vw, 32px);
   font-weight: 900;
   letter-spacing: -0.05em;
+}
+
+/* 중간 폭(921~1100px)에서 카드가 360px 부근까지 좁아지면 배지 옆 한글 제목이
+   음절 중간("현재 접/속 환경")에서 접힌다 — 어절(keep-all) 단위로만 줄바꿈한다. */
+.runtime-card h2,
+.runtime-card__summary {
+  word-break: keep-all;
 }
 
 .runtime-card__body {
@@ -610,9 +624,11 @@ code,
   margin: 22px 0 0;
 }
 
+/* 921~1035px 3열 구간에서 비분절 라우트(/production/current/)가 카드 밖으로 새지
+   않도록 — config-list 와 같은 minmax(0) + break-word 패턴으로 카드 안에서 줄바꿈. */
 .env-card dl div {
   display: grid;
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 68px minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -625,7 +641,9 @@ code,
 
 .env-card dd {
   margin: 0;
+  min-width: 0;
   color: var(--app-ink);
+  word-break: break-word;
 }
 
 .pipeline-grid,
@@ -802,10 +820,6 @@ code,
   .topbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .topbar__links {
-    flex-wrap: wrap;
   }
 
   .runtime-card__header,
