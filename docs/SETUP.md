@@ -1,7 +1,7 @@
 # SETUP — AWS에 0부터 구축하기 (어디를 수정해야 하나)
 
 이 문서는 **"어떤 파일의 어느 부분을 바꿔야 실제로 동작하는가"**를 단계별로 설명합니다.
-개념은 [원본 가이드](https://github.com/blue45f/heejun/blob/main/public/%EA%B0%9C%EB%B0%9C%EA%B0%80%EC%9D%B4%EB%93%9C/27_%EB%8B%A4%EC%A4%91_%EA%B0%9C%EB%B0%9C_%EC%84%9C%EB%B2%84_%EA%B5%AC%EC%B6%95_%EA%B0%80%EC%9D%B4%EB%93%9C.md)와 [README](../README.md)를 참고하세요.
+개념은 원본 27번 가이드, [README](../README.md), [멀티베타환경 가이드](MULTI_BETA_GUIDE.md)를 참고하세요.
 
 > **핵심 원칙 (최소 수정으로 구축)**: 코드/워크플로/IaC의 **이름 규칙은 건드리지 않습니다.** 바꾸는 것은 거의 전부 `infra/terraform/terraform.tfvars` **한 파일**과, 거기서 나온 출력값을 **GitHub repo 변수**에 붙이는 것뿐입니다. 이름 규칙(`web`, `pr-<n>`, `web/<env>/current` 등)을 바꾸면 여러 파일을 동시에 고쳐야 하므로 기본값 유지를 권장합니다(§8).
 
@@ -9,14 +9,14 @@
 
 ## 0. 사전 준비물
 
-| 도구 | 용도 | 설치 확인 |
-| :--- | :--- | :--- |
-| AWS 계정 + CLI 권한 | 인프라 생성 | `aws sts get-caller-identity` |
-| [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.6 | 인프라 프로비저닝 | `terraform version` |
-| [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) | 배포 스크립트 | `aws --version` |
-| [GitHub CLI](https://cli.github.com/) (`gh`) | repo 변수 설정/cleanup | `gh auth status` |
-| Node 22 + pnpm(corepack) | 앱 빌드 | `node -v` (이 repo는 `.nvmrc`로 22 고정) |
-| (선택) 도메인 + Route53 hosted zone | custom 도메인 | — |
+| 도구                                                                                        | 용도                   | 설치 확인                                |
+| :------------------------------------------------------------------------------------------ | :--------------------- | :--------------------------------------- |
+| AWS 계정 + CLI 권한                                                                         | 인프라 생성            | `aws sts get-caller-identity`            |
+| [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.6                       | 인프라 프로비저닝      | `terraform version`                      |
+| [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) | 배포 스크립트          | `aws --version`                          |
+| [GitHub CLI](https://cli.github.com/) (`gh`)                                                | repo 변수 설정/cleanup | `gh auth status`                         |
+| Node 22 + pnpm(corepack)                                                                    | 앱 빌드                | `node -v` (이 repo는 `.nvmrc`로 22 고정) |
+| (선택) 도메인 + Route53 hosted zone                                                         | custom 도메인          | —                                        |
 
 > AWS/GitHub 로그인이 필요하면 이 세션 프롬프트에 `! aws configure` 또는 `! gh auth login`처럼 `!` 접두사로 직접 실행할 수 있습니다.
 
@@ -26,20 +26,20 @@
 
 아래 값만 본인 환경으로 바꾸면 됩니다.
 
-| # | 바꿀 값 | 파일 | 위치(항목) | 예시 → 바꿀 값 |
-| :-- | :--- | :--- | :--- | :--- |
-| 1 | GitHub owner | `infra/terraform/terraform.tfvars` | `github_owner` | `blue45f` → 본인 |
-| 2 | GitHub repo | `infra/terraform/terraform.tfvars` | `github_repo` | `heejun` → 본인 |
-| 3 | 리전 | `infra/terraform/terraform.tfvars` | `aws_region` | `ap-northeast-2` (서울) |
-| 4 | 서비스명 | `infra/terraform/terraform.tfvars` | `service_name` | `web` (그대로 권장) |
-| 5 | OIDC provider 신규 생성 여부 | `infra/terraform/terraform.tfvars` | `create_oidc_provider` | 계정에 이미 있으면 `false` + import |
-| 6 | custom 도메인 사용 | `infra/terraform/terraform.tfvars` | `enable_custom_domain` | 도메인 있으면 `true` |
-| 7 | 도메인 값들 | `infra/terraform/terraform.tfvars` | `apex_domain`/`staging_host`/`production_host`/`hosted_zone_id` | `example.com` → 본인 도메인 |
-| 8 | GitHub repo variables | GitHub UI 또는 `gh` | Settings → Variables | `terraform output`이 알려줌 (§3) |
-| 9 | GitHub environments | GitHub UI | Settings → Environments | `preview`/`staging`/`production` (§3) |
-| 10 | 런타임 API 주소 등 | `apps/web/public/env.*.json` | `apiBaseUrl` 등 | `https://api-*.example.com` → 본인 API |
-| 11 | (SSR 필요 시) export 해제 | `apps/web/next.config.ts` | `output: 'export'` 줄 | 제거 + 배포 방식 변경 (§7) |
-| 12 | (선택) Amplify 사용 | GitHub variable `AMPLIFY_APP_ID` | — | 비우면 Amplify 단계 자동 skip |
+| #   | 바꿀 값                      | 파일                               | 위치(항목)                                                      | 예시 → 바꿀 값                         |
+| :-- | :--------------------------- | :--------------------------------- | :-------------------------------------------------------------- | :------------------------------------- |
+| 1   | GitHub owner                 | `infra/terraform/terraform.tfvars` | `github_owner`                                                  | `blue45f` → 본인                       |
+| 2   | GitHub repo                  | `infra/terraform/terraform.tfvars` | `github_repo`                                                   | `multi-environment-setting` → 본인     |
+| 3   | 리전                         | `infra/terraform/terraform.tfvars` | `aws_region`                                                    | `ap-northeast-2` (서울)                |
+| 4   | 서비스명                     | `infra/terraform/terraform.tfvars` | `service_name`                                                  | `web` (그대로 권장)                    |
+| 5   | OIDC provider 신규 생성 여부 | `infra/terraform/terraform.tfvars` | `create_oidc_provider`                                          | 계정에 이미 있으면 `false` + import    |
+| 6   | custom 도메인 사용           | `infra/terraform/terraform.tfvars` | `enable_custom_domain`                                          | 도메인 있으면 `true`                   |
+| 7   | 도메인 값들                  | `infra/terraform/terraform.tfvars` | `apex_domain`/`staging_host`/`production_host`/`hosted_zone_id` | `example.com` → 본인 도메인            |
+| 8   | GitHub repo variables        | GitHub UI 또는 `gh`                | Settings → Variables                                            | `terraform output`이 알려줌 (§3)       |
+| 9   | GitHub environments          | GitHub UI                          | Settings → Environments                                         | `preview`/`staging`/`production` (§3)  |
+| 10  | 런타임 API 주소 등           | `apps/web/public/env.*.json`       | `apiBaseUrl` 등                                                 | `https://api-*.example.com` → 본인 API |
+| 11  | (SSR 필요 시) export 해제    | `apps/web/next.config.ts`          | `output: 'export'` 줄                                           | 제거 + 배포 방식 변경 (§7)             |
+| 12  | (선택) Amplify 사용          | GitHub variable `AMPLIFY_APP_ID`   | —                                                               | 비우면 Amplify 단계 자동 skip          |
 
 > 코드(`infra/terraform/*.tf`, `.github/workflows/*`, `scripts/*`)는 이 값들을 **변수로 참조**하므로 직접 수정할 필요가 없습니다.
 
@@ -72,13 +72,14 @@ cp terraform.tfvars.example terraform.tfvars
 
 ```hcl
 github_owner         = "blue45f"   # ← 본인
-github_repo          = "heejun"    # ← 본인
+github_repo          = "multi-environment-setting" # ← 본인
 aws_region           = "ap-northeast-2"
 create_oidc_provider = true        # 계정에 GitHub OIDC가 이미 있으면 false (아래 import)
 enable_custom_domain = false       # 1차: 도메인 없이 CloudFront 기본 도메인으로 테스트
 ```
 
 > **이미 GitHub OIDC provider가 있는 계정**이면 `create_oidc_provider = false`로 두고 한 번만 import 합니다(계정당 1개만 존재 가능):
+>
 > ```bash
 > terraform import 'aws_iam_openid_connect_provider.github[0]' \
 >   arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com
@@ -143,12 +144,12 @@ make gh-setup
 
 설정되는 변수:
 
-| 변수 | 값 |
-| :--- | :--- |
-| `AWS_REGION` | 배포 리전 |
-| `ARTIFACT_BUCKET` | 공유 artifact 버킷 이름 |
-| `SERVICES` | 서비스 목록 JSON 배열 (예 `["web"]`) — 워크플로 매트릭스 |
-| `DEPLOY_CONFIG` | 서비스 → {역할 ARN, 배포 ID, CloudFront 도메인, preview URL 템플릿} JSON 맵 |
+| 변수              | 값                                                                          |
+| :---------------- | :-------------------------------------------------------------------------- |
+| `AWS_REGION`      | 배포 리전                                                                   |
+| `ARTIFACT_BUCKET` | 공유 artifact 버킷 이름                                                     |
+| `SERVICES`        | 서비스 목록 JSON 배열 (예 `["web"]`) — 워크플로 매트릭스                    |
+| `DEPLOY_CONFIG`   | 서비스 → {역할 ARN, 배포 ID, CloudFront 도메인, preview URL 템플릿} JSON 맵 |
 
 워크플로는 `SERVICES`를 매트릭스로 돌고 서비스별 값은 `fromJSON(vars.DEPLOY_CONFIG)[service]`에서 읽습니다. preview URL은 `DEPLOY_CONFIG[service].preview_url_template`을 우선 사용하고, 기존 설정에는 CloudFront 기본 도메인 `/pr-<n>/` fallback을 씁니다. staging/production smoke는 서비스별 CloudFront 도메인으로 동작하므로 별도 도메인 변수가 필요 없습니다.
 
@@ -158,10 +159,10 @@ make gh-setup
 
 `Settings → Environments`에서 3개를 만듭니다. 이름이 OIDC trust 조건(`repo:OWNER/REPO:environment:<env>`)과 **정확히** 일치해야 합니다.
 
-| environment | 보호 규칙 | 이유 |
-| :--- | :--- | :--- |
-| `preview` | 없음 | PR마다 빠르게 배포 |
-| `staging` | (선택) QA reviewer | release candidate |
+| environment  | 보호 규칙                                                   | 이유                                                                        |
+| :----------- | :---------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| `preview`    | 없음                                                        | PR마다 빠르게 배포                                                          |
+| `staging`    | (선택) QA reviewer                                          | release candidate                                                           |
 | `production` | **Required reviewers 지정 + Deployment branches: `main`만** | 승인 게이트. `deploy.yml`의 production job이 여기서 멈춰 승인을 기다립니다. |
 
 > `production`에 reviewer를 걸지 않으면 승인 없이 바로 배포됩니다. 반드시 설정하세요.
@@ -178,9 +179,9 @@ make gh-setup
 // apps/web/public/env.production.json
 {
   "stage": "production",
-  "apiBaseUrl": "https://api.example.com",     // ← 본인 production API
+  "apiBaseUrl": "https://api.example.com", // ← 본인 production API
   "sentryEnvironment": "production",
-  "featureFlagClientKey": "public-prod-key"     // ← public 키만! secret 금지
+  "featureFlagClientKey": "public-prod-key", // ← public 키만! secret 금지
 }
 ```
 
@@ -279,12 +280,12 @@ flowchart LR
 
 규칙을 바꾸면 아래가 **함께** 바뀌어야 합니다(그래서 기본값 유지 권장).
 
-| 바꾸는 것 | 같이 고쳐야 하는 곳 |
-| :--- | :--- |
-| `service_name`(`web`) | tfvars(대부분 자동 전파), 워크플로 `env.SERVICE_NAME` 3개 |
-| preview prefix(`pr-`) | `infra/terraform/functions/preview-router.js.tftpl`(라우팅·검증), `scripts/cleanup-preview.sh`(가드 패턴), `github-oidc.tf`(role resource ARN), 워크플로 preview job |
-| `current`/`releases` 구조 | `scripts/promote.sh`·`rollback.sh`, `cloudfront.tf`의 `origin_path` |
-| 앱 디렉터리(`apps/web`) | 워크플로 `env.APP_DIR`/`OUTPUT_DIR`, `amplify.yml` |
+| 바꾸는 것                 | 같이 고쳐야 하는 곳                                                                                                                                                  |
+| :------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `service_name`(`web`)     | tfvars(대부분 자동 전파), 워크플로 `env.SERVICE_NAME` 3개                                                                                                            |
+| preview prefix(`pr-`)     | `infra/terraform/functions/preview-router.js.tftpl`(라우팅·검증), `scripts/cleanup-preview.sh`(가드 패턴), `github-oidc.tf`(role resource ARN), 워크플로 preview job |
+| `current`/`releases` 구조 | `scripts/promote.sh`·`rollback.sh`, `cloudfront.tf`의 `origin_path`                                                                                                  |
+| 앱 디렉터리(`apps/web`)   | 워크플로 `env.APP_DIR`/`OUTPUT_DIR`, `amplify.yml`                                                                                                                   |
 
 ---
 
@@ -292,14 +293,14 @@ flowchart LR
 
 실제 빌드 가능하도록 원본 가이드에서 다음을 보정했습니다.
 
-| 항목 | 원본 가이드 | 이 저장소 (보정) |
-| :--- | :--- | :--- |
-| GitHub Action 버전 | `upload-artifact@v6`, `github-script@v8` | 최신 기준 `upload-artifact@v7`, `download-artifact@v8`, `github-script@v9` (checkout/setup-node/configure-aws는 `@v6` 유효) |
-| 멀티테넌트 preview 라우팅 | "PR마다 URL" 개념만 서술 | 단일 CloudFront + **CloudFront Function**(`preview-router.js.tftpl`)으로 host/path → S3 prefix 라우팅을 실제 구현 |
-| preview의 SPA fallback | CustomErrorResponse `/index.html` 예시 | preview는 테넌트 prefix를 반영해야 하므로 **Function 내부에서 fallback** 처리(CustomErrorResponse는 staging/production에만) |
-| ACM 리전 | 리전 언급 없음 | CloudFront용 ACM은 반드시 **us-east-1** — Terraform이 provider alias로 처리 |
-| Next RSC 캐시 | `index.html`/asset만 언급 | App Router static export의 `*.txt`(RSC 페이로드)도 **no-cache** 처리(`deploy-s3.sh`) |
-| build-once 승격 | 개념 서술 | GitHub artifact를 staging→production이 **동일 바이트**로 공유, production은 environment reviewer 게이트 |
+| 항목                      | 원본 가이드                              | 이 저장소 (보정)                                                                                                            |
+| :------------------------ | :--------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Action 버전        | `upload-artifact@v6`, `github-script@v8` | 최신 기준 `upload-artifact@v7`, `download-artifact@v8`, `github-script@v9` (checkout/setup-node/configure-aws는 `@v6` 유효) |
+| 멀티테넌트 preview 라우팅 | "PR마다 URL" 개념만 서술                 | 단일 CloudFront + **CloudFront Function**(`preview-router.js.tftpl`)으로 host/path → S3 prefix 라우팅을 실제 구현           |
+| preview의 SPA fallback    | CustomErrorResponse `/index.html` 예시   | preview는 테넌트 prefix를 반영해야 하므로 **Function 내부에서 fallback** 처리(CustomErrorResponse는 staging/production에만) |
+| ACM 리전                  | 리전 언급 없음                           | CloudFront용 ACM은 반드시 **us-east-1** — Terraform이 provider alias로 처리                                                 |
+| Next RSC 캐시             | `index.html`/asset만 언급                | App Router static export의 `*.txt`(RSC 페이로드)도 **no-cache** 처리(`deploy-s3.sh`)                                        |
+| build-once 승격           | 개념 서술                                | GitHub artifact를 staging→production이 **동일 바이트**로 공유, production은 environment reviewer 게이트                     |
 
 ---
 
