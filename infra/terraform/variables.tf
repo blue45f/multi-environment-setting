@@ -50,7 +50,7 @@ variable "github_owner" {
 }
 
 variable "github_repo" {
-  description = "GitHub 저장소 이름 (예: heejun). owner는 github_owner로 분리해서 받는다."
+  description = "GitHub 저장소 이름 (예: multi-environment-setting). owner는 github_owner로 분리해서 받는다."
   type        = string
 }
 

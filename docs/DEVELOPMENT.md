@@ -2,7 +2,8 @@
 
 다중 환경(preview/staging/production) 정적 프론트엔드 배포의 **AWS 레퍼런스 구현**.
 "무엇을/왜"는 [README.md](../README.md)(단일 진실 공급원), 환경·변수 정의는
-[ENVIRONMENTS.md](./ENVIRONMENTS.md), 1회 셋업은 [SETUP.md](./SETUP.md)를 따릅니다.
+[ENVIRONMENTS.md](./ENVIRONMENTS.md), 멀티베타환경 이론과 Mermaid 다이어그램은
+[MULTI_BETA_GUIDE.md](./MULTI_BETA_GUIDE.md), 1회 셋업은 [SETUP.md](./SETUP.md)를 따릅니다.
 포트폴리오 공통 컨벤션은 상위 워크스페이스 루트의 `DEVELOPMENT.md`·`CONTRIBUTING.md` 참고.
 
 > **의도적 예외 (루트 표준과 다름):** 이 저장소는 **루트 `package.json`이 없습니다.** 검증/실행 진입점은
@@ -11,7 +12,7 @@
 
 ## 스택
 
-- **앱** (`apps/web`): Next.js 16(App Router) · React 19(**React Compiler 활성화** — `next.config.ts`의 최상위 `reactCompiler: true`) · TypeScript · Tailwind(design tokens) · Vitest
+- **앱** (`apps/web`): Next.js 16(App Router) · React 19(**React Compiler 활성화** — `next.config.ts`의 최상위 `reactCompiler: true`) · TypeScript · 순수 CSS design tokens · Vitest
 - **린트/포맷**: ESLint flat config(`apps/web/eslint.config.mjs`, `eslint-config-next` 확장) + Prettier(`apps/web/.prettierrc`)
 - **인프라** (`infra/`): Terraform — CloudFront + S3 정적 호스팅(가이드 Pattern C, build-once), 멀티테넌트 라우팅은 CloudFront Function, 권한은 GitHub OIDC 단기 자격증명
 - **패키지 매니저**: corepack 기반 pnpm(`apps/web`의 `packageManager` 필드), Node는 `.nvmrc`(22)
@@ -51,6 +52,8 @@ make app-test SERVICE=web   # 단일 서비스만 (eslint . + tsc --noEmit + vit
   Rules of React 위반 금지. 배선은 `apps/web/next.config.ts`(`reactCompiler: true`) + `babel-plugin-react-compiler`.
 - **단일 진실 공급원**: 서비스 이름·리전·환경 이름·변수 이름·S3 prefix 규칙은 [README.md](../README.md)에서 정의하고
   모든 워크플로/IaC/스크립트가 이를 따릅니다. 새 값은 README에 먼저 등재.
+- **가이드 싱크**: `/intro`, [MULTI_BETA_GUIDE.md](./MULTI_BETA_GUIDE.md), [ENVIRONMENTS.md](./ENVIRONMENTS.md), runbook은 같은 환경명과 prefix 규칙을 사용합니다.
+  route/domain/config/security 설명을 바꾸면 네 파일을 함께 확인합니다.
 - **배포 영향 변경**: 디렉터리/이름/리전 변경 시 Terraform(`infra/`)·워크플로·스크립트 경로를 함께 갱신하고
   관련 런북(`docs/runbooks/`)을 확인.
 

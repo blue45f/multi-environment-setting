@@ -4,7 +4,7 @@
 
 # ── 필수 ────────────────────────────────────────────────────────────────────
 github_owner = "blue45f" # GitHub 조직/사용자
-github_repo  = "heejun"  # 저장소 이름
+github_repo  = "multi-environment-setting"  # 저장소 이름
 
 # ── 기본값으로 충분하면 생략 가능 ────────────────────────────────────────────
 service_name = "web"

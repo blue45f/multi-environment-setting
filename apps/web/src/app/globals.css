@@ -145,7 +145,10 @@ body {
 h1,
 h2,
 h3 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family:
+    'Avenir Next', 'Trebuchet MS', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  font-weight: 850;
+  word-break: keep-all;
 }
 
 /* 기계 데이터(url / stage 값)는 mono + tabular 로 — instrument 시그니처 */
@@ -221,15 +224,15 @@ code,
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(
-      circle at 16% 12%,
-      color-mix(in oklch, var(--stage-preview-bg) 72%, transparent),
-      transparent 28rem
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--app-line) 45%, transparent) 0 1px,
+      transparent 1px 96px
     ),
-    radial-gradient(
-      circle at 82% 4%,
-      color-mix(in oklch, var(--stage-staging-bg) 58%, transparent),
-      transparent 24rem
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--app-line) 35%, transparent) 0 1px,
+      transparent 1px 96px
     ),
     linear-gradient(
       135deg,
@@ -273,15 +276,7 @@ code,
 }
 
 .hero-shell::after {
-  content: '';
-  position: absolute;
-  inset: auto 8% -80px auto;
-  width: 280px;
-  height: 280px;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--stage-production-bg) 72%, transparent);
-  filter: blur(8px);
-  z-index: 0;
+  content: none;
 }
 
 .topbar,
@@ -317,7 +312,7 @@ code,
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -360,7 +355,7 @@ code,
   color: var(--app-accent-hover);
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -370,7 +365,7 @@ code,
   max-width: 12ch;
   font-size: clamp(44px, 8.5vw, 96px);
   line-height: 0.94;
-  letter-spacing: -0.08em;
+  letter-spacing: 0;
 }
 
 .hero-lede,
@@ -455,14 +450,14 @@ code,
   color: var(--app-ink);
   font-size: clamp(26px, 3vw, 42px);
   line-height: 1;
-  letter-spacing: -0.06em;
+  letter-spacing: 0;
 }
 
 .runtime-card__summary {
   margin: 0;
   font-size: clamp(22px, 2.5vw, 32px);
   font-weight: 900;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 /* 중간 폭(921~1100px)에서 카드가 360px 부근까지 좁아지면 배지 옆 한글 제목이
@@ -599,7 +594,7 @@ code,
   color: var(--app-line-strong);
   font-size: 46px;
   font-weight: 950;
-  letter-spacing: -0.08em;
+  letter-spacing: 0;
 }
 
 .env-card h3,
@@ -608,7 +603,7 @@ code,
   margin: 28px 0 10px;
   font-size: 24px;
   line-height: 1.08;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .env-card p,
@@ -707,13 +702,13 @@ code,
   border-radius: 28px;
   font-size: 24px;
   font-weight: 950;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .diagram-node span {
   color: var(--app-ink-subtle);
   font-size: 12px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -836,8 +831,13 @@ code,
   }
 
   .hero-copy h1,
-  .intro-hero h1 {
+  .intro-hero h1,
+  .guide-hero h1 {
     font-size: clamp(40px, 16vw, 64px);
+  }
+
+  .guide-hero h1 {
+    font-size: clamp(38px, 12vw, 54px);
   }
 }
 
@@ -856,6 +856,13 @@ code,
 /* ── expanded intro guide ─────────────────────────────────────────────── */
 .guide-hero,
 .guide-flow,
+.guide-stack,
+.guide-theory,
+.guide-mermaid,
+.guide-domains,
+.guide-platforms,
+.guide-scripts,
+.guide-script-theory,
 .guide-modes,
 .guide-demo,
 .guide-usage,
@@ -880,9 +887,9 @@ code,
 .guide-hero h1 {
   max-width: 860px;
   margin: 0;
-  font-size: clamp(44px, 8vw, 104px);
-  line-height: 0.9;
-  letter-spacing: -0.075em;
+  font-size: clamp(42px, 5.8vw, 78px);
+  line-height: 1.05;
+  letter-spacing: 0;
 }
 
 .guide-hero p:not(.eyebrow) {
@@ -897,17 +904,17 @@ code,
   position: relative;
   padding: clamp(20px, 3vw, 30px);
   border: 1px solid var(--app-line-strong);
-  border-radius: 28px;
+  border-radius: 8px;
   background:
     linear-gradient(
       135deg,
       color-mix(in oklch, var(--app-panel) 92%, transparent),
       var(--app-panel-2)
     ),
-    radial-gradient(
-      circle at top right,
-      color-mix(in oklch, var(--stage-preview-bg) 70%, transparent),
-      transparent 16rem
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--app-line) 70%, transparent) 0 1px,
+      transparent 1px 38px
     );
   box-shadow: var(--app-shadow);
 }
@@ -931,7 +938,7 @@ code,
   color: var(--app-ink-subtle);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -940,7 +947,8 @@ code,
   margin-top: 28px;
   font-size: clamp(22px, 3vw, 34px);
   line-height: 1.05;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .guide-snapshot dl,
@@ -971,6 +979,13 @@ code,
 }
 
 .guide-flow,
+.guide-stack,
+.guide-theory,
+.guide-mermaid,
+.guide-domains,
+.guide-platforms,
+.guide-scripts,
+.guide-script-theory,
 .guide-modes,
 .guide-demo,
 .guide-usage,
@@ -1002,10 +1017,17 @@ code,
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(26px, 4vw, 44px);
   line-height: 0.98;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .guide-rail p,
+.stack-layer p,
+.theory-card p,
+.mermaid-card p,
+.domain-card p,
+.platform-card p,
+.script-row p,
+.script-theory-card p,
 .mode-card p,
 .walkthrough-list p,
 .guide-usage > div > p,
@@ -1013,6 +1035,285 @@ code,
 .compare-grid p {
   color: var(--app-ink-muted);
   line-height: 1.68;
+}
+
+.stack-layer p,
+.theory-card p,
+.sync-table__row span {
+  overflow-wrap: anywhere;
+}
+
+.stack-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: clamp(22px, 4vw, 42px);
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-line);
+}
+
+.stack-layer {
+  min-width: 0;
+  min-height: 220px;
+  padding: clamp(18px, 2.5vw, 28px);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--app-panel) 92%, transparent),
+      var(--app-panel)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 23px,
+      color-mix(in oklch, var(--app-line) 60%, transparent) 23px 24px
+    );
+}
+
+.stack-layer span,
+.theory-card::before,
+.mermaid-card h3::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 26px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 999px;
+  color: var(--app-accent-hover);
+  background: var(--app-panel-2);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stack-layer h3 {
+  margin: 34px 0 12px;
+  font-size: clamp(18px, 1.7vw, 23px);
+  line-height: 1.16;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.theory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 18px);
+  margin-top: clamp(22px, 4vw, 42px);
+}
+
+.theory-card {
+  position: relative;
+  padding: clamp(18px, 2.6vw, 26px);
+  border-top: 2px solid var(--app-line-strong);
+  background: color-mix(in oklch, var(--app-panel) 76%, transparent);
+}
+
+.theory-card::before {
+  content: 'MD';
+}
+
+.theory-card h3 {
+  margin: 22px 0 10px;
+  font-size: clamp(21px, 2.2vw, 27px);
+  line-height: 1.12;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+.mermaid-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(16px, 3vw, 26px);
+  margin-top: clamp(22px, 4vw, 42px);
+}
+
+.mermaid-card {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--app-panel) 90%, transparent);
+}
+
+.mermaid-card h3 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.mermaid-card h3::before {
+  content: 'M';
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.mermaid-card pre {
+  min-width: 0;
+  overflow-x: auto;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--app-ink) 8%, var(--app-panel));
+  color: var(--app-ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mermaid-card code {
+  white-space: pre;
+}
+
+.rendered-mermaid {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-panel);
+}
+
+.rendered-mermaid__svg {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.rendered-mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
+.rendered-mermaid__state {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  color: var(--app-ink-muted);
+  font-weight: 800;
+}
+
+.rendered-mermaid figcaption {
+  margin-top: 10px;
+  color: var(--app-err-fg);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mermaid-source {
+  border-top: 1px solid var(--app-line);
+  padding-top: 12px;
+}
+
+.mermaid-source summary {
+  cursor: pointer;
+  color: var(--app-accent-hover);
+  font-weight: 900;
+}
+
+.domain-flow,
+.platform-grid,
+.script-theory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 18px);
+  margin-top: clamp(22px, 4vw, 42px);
+}
+
+.domain-card,
+.platform-card,
+.script-theory-card {
+  min-width: 0;
+  padding: clamp(18px, 2.7vw, 26px);
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--app-panel) 90%, transparent);
+}
+
+.domain-card span,
+.platform-card span,
+.script-row span {
+  color: var(--app-accent-hover);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.domain-card h3,
+.platform-card h3,
+.script-row h3,
+.script-theory-card h3 {
+  margin: 14px 0 10px;
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1.12;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.domain-card strong {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--app-ink);
+  font-size: 14px;
+}
+
+.platform-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.platform-card pre,
+.script-row pre {
+  min-width: 0;
+  overflow-x: auto;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--app-ink) 8%, var(--app-panel));
+  color: var(--app-ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.platform-card ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--app-ink-muted);
+  line-height: 1.55;
+}
+
+.script-list {
+  display: grid;
+  gap: 1px;
+  margin-top: clamp(22px, 4vw, 42px);
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-line);
+}
+
+.script-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.95fr) minmax(240px, 0.9fr) minmax(260px, 1fr);
+  gap: 1px;
+  min-width: 0;
+}
+
+.script-row > * {
+  min-width: 0;
+  padding: 16px;
+  background: var(--app-panel);
+}
+
+.script-row h3 {
+  font-size: clamp(18px, 2vw, 24px);
 }
 
 .mode-grid,
@@ -1027,7 +1328,7 @@ code,
 .compare-grid article,
 .command-stack article {
   border: 1px solid var(--app-line);
-  border-radius: 26px;
+  border-radius: 8px;
   background: color-mix(in oklch, var(--app-panel) 92%, transparent);
 }
 
@@ -1047,10 +1348,9 @@ code,
 .command-stack h3,
 .walkthrough-list h3 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
 }
 
 .mode-card__top code {
@@ -1123,7 +1423,7 @@ code,
   margin: 0;
   font-size: clamp(34px, 5vw, 70px);
   line-height: 0.94;
-  letter-spacing: -0.065em;
+  letter-spacing: 0;
 }
 
 .command-stack {
@@ -1174,18 +1474,33 @@ code,
 
 @media (max-width: 880px) {
   .guide-hero__grid,
+  .guide-usage,
   .guide-usage {
     grid-template-columns: 1fr;
   }
 
   .guide-rail,
+  .stack-strip,
+  .theory-grid,
+  .mermaid-grid,
+  .domain-flow,
+  .platform-grid,
+  .script-theory-grid,
   .mode-grid,
   .compare-grid,
   .walkthrough-list {
     grid-template-columns: 1fr;
   }
 
+  .script-row {
+    grid-template-columns: 1fr;
+  }
+
   .guide-rail article {
+    min-height: auto;
+  }
+
+  .stack-layer {
     min-height: auto;
   }
 
@@ -1257,7 +1572,7 @@ code,
 
 .city-step article {
   border: 1px solid var(--app-line);
-  border-radius: 24px;
+  border-radius: 8px;
   padding: 14px;
   background: linear-gradient(
     180deg,
@@ -1271,7 +1586,7 @@ code,
   margin: 12px 0 8px;
   font-size: clamp(20px, 2vw, 26px);
   line-height: 1.08;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .city-step p {
@@ -1307,15 +1622,14 @@ code,
 .principle-card {
   padding: clamp(16px, 2.8vw, 22px);
   border: 1px solid var(--app-line);
-  border-radius: 24px;
+  border-radius: 8px;
   background: var(--app-panel);
 }
 
 .principle-card h3 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(22px, 2.7vw, 34px);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .principle-card p {
@@ -1407,6 +1721,13 @@ code,
   .guide-city,
   .guide-principles,
   .guide-glossary,
+  .guide-stack,
+  .guide-theory,
+  .guide-mermaid,
+  .guide-domains,
+  .guide-platforms,
+  .guide-scripts,
+  .guide-script-theory,
   .guide-demo,
   .guide-flow,
   .guide-modes,

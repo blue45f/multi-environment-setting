@@ -16,7 +16,7 @@ Parameters:
     Description: 'GitHub 조직/사용자 (예: blue45f)'
   GitHubRepo:
     Type: String
-    Description: 'GitHub 저장소 이름 (예: heejun)'
+    Description: 'GitHub 저장소 이름 (예: multi-environment-setting)'
   ArtifactBucketName:
     Type: String
     Description: 전역 유일한 S3 버킷 이름 (예 web-frontend-artifacts-<account>-<region>)

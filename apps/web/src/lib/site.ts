@@ -9,4 +9,4 @@
 // 호스트(README §10 의 S3 website URL)는 robots 로 막지 못한다 — 그쪽 경계는
 // 접근 제어/X-Robots-Tag 이고, 중복 호스트 색인은 canonical 메타데이터 영역이다.
 // 공개 URL이 바뀌면 이 값과 README §10(현재 공개 URL)을 함께 갱신한다.
-export const SITE_URL = 'https://web-blond-nine-45.vercel.app';
+export const SITE_URL = 'https://multi-beta-guide.vercel.app';
