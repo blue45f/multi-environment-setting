@@ -5,6 +5,10 @@ import './globals.css';
 
 export const metadata = {
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/icon-192.png',
+  },
   title: 'Multi-Environment Demo — Build once · Deploy many 멀티환경 레퍼런스',
   description:
     'PR마다 격리된 preview, staging 검증, production 승격까지 — 한 번 빌드한 정적 산출물에 env.json만 갈아끼워 배포하는 S3+CloudFront·GitHub OIDC 멀티환경 레퍼런스',
