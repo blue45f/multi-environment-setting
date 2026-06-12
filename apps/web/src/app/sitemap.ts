@@ -10,21 +10,15 @@ import { SITE_URL } from '../lib/site';
 // output: 'export'에서는 메타데이터 라우트도 정적임을 명시해야 빌드가 통과한다.
 export const dynamic = 'force-static';
 
+const productionRoutes = ['/', '/intro/', '/intro/setup/', '/intro/scripts/', '/intro/operations/'];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
-  return [
-    {
-      url: `${SITE_URL}/`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/intro/`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-  ];
+  return productionRoutes.map((route) => ({
+    url: `${SITE_URL}${route}`,
+    lastModified,
+    changeFrequency: route === '/' ? 'weekly' : 'monthly',
+    priority: route === '/' ? 1 : route === '/intro/' ? 0.8 : 0.7,
+  }));
 }
