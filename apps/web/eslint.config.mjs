@@ -1,3 +1,5 @@
+import reactCompiler from 'eslint-plugin-react-compiler';
+import reactHooks from 'eslint-plugin-react-hooks';
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import nextTypescript from 'eslint-config-next/typescript';
 
@@ -15,6 +17,18 @@ const eslintConfig = [
       'playwright-report/**',
       'test-results/**',
     ],
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-compiler': reactCompiler,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-compiler/react-compiler': 'error',
+    },
   },
 ];
 
