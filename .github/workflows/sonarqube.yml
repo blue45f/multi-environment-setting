@@ -29,23 +29,36 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 시크릿이 없으면 스캔을 건너뛴다(레드 X 대신 그린). 시크릿이 설정되면
+      # 이후 스텝들이 정상 실행된다. job-level if는 secrets를 못 읽어 스텝 게이트로 처리.
+      - name: Check SonarQube secrets
+        id: sonar
+        run: |
+          if [ -n "$SONAR_HOST_URL" ] && [ -n "$SONAR_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SONAR_HOST_URL/SONAR_TOKEN 미설정 — SonarQube 스캔을 건너뜁니다."
+          fi
+
       - uses: pnpm/action-setup@v6
+        if: steps.sonar.outputs.configured == 'true'
+        with:
+          version: 11.4.0
 
       - uses: actions/setup-node@v6
+        if: steps.sonar.outputs.configured == 'true'
         with:
           node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
 
       - name: Install dependencies
+        if: steps.sonar.outputs.configured == 'true'
         run: pnpm --dir apps/web install --frozen-lockfile
 
-      - name: Verify SonarQube secrets
-        run: |
-          test -n "$SONAR_HOST_URL"
-          test -n "$SONAR_TOKEN"
-
       - name: SonarQube scan
+        if: steps.sonar.outputs.configured == 'true'
         uses: SonarSource/sonarqube-scan-action@v8.2.0
         env:
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
