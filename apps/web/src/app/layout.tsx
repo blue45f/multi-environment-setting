@@ -7,7 +7,7 @@ export const metadata = {
   manifest: '/manifest.webmanifest',
   icons: {
     icon: '/favicon.svg',
-    apple: '/icon-192.png',
+    apple: '/apple-touch-icon.png',
   },
   title: 'Multi-Environment Demo — Build once · Deploy many 멀티환경 레퍼런스',
   description:

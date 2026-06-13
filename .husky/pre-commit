@@ -1,4 +1,5 @@
-#!/bin/sh
-cd apps/web &&
-  pnpm exec lint-staged &&
-  pnpm run typecheck
+#!/usr/bin/env sh
+set -e
+cd apps/web
+pnpm exec lint-staged
+pnpm run typecheck

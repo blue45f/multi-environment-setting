@@ -3,9 +3,11 @@ import type { ReactNode } from 'react';
 
 const guideLinks = [
   { href: '/intro', label: '개요' },
+  { href: '/intro/theory', label: '이론 가이드' },
   { href: '/intro/setup', label: '설정' },
   { href: '/intro/scripts', label: '스크립트' },
   { href: '/intro/operations', label: '운영' },
+  { href: '/intro/generator', label: '설계 제너레이터' },
 ];
 
 export default function IntroLayout({ children }: { children: ReactNode }) {

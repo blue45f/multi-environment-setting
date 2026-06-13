@@ -1712,6 +1712,129 @@ code,
   white-space: pre;
 }
 
+/* 실제 스크립트 코드 뷰어 스타일 */
+.script-row__code {
+  grid-column: 1 / -1;
+  padding: 16px;
+  background: var(--app-panel);
+  border-top: 1px solid var(--app-line);
+}
+
+.script-code-details {
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-panel-2);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.script-code-details[open] {
+  border-color: var(--app-line-strong);
+}
+
+.script-code-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-ink-subtle);
+  background: var(--app-panel);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.script-code-summary::-webkit-details-marker {
+  display: none;
+}
+
+.script-code-summary::after {
+  content: '▼';
+  font-size: 10px;
+  color: var(--app-ink-subtle);
+  transition: transform 0.2s ease;
+}
+
+.script-code-details[open] .script-code-summary::after {
+  transform: rotate(180deg);
+}
+
+.script-code-summary:hover {
+  background: var(--app-panel-2);
+  color: var(--app-ink);
+}
+
+.script-code-viewport {
+  overflow-x: auto;
+  background: color-mix(in oklch, var(--app-ink) 3%, var(--app-panel-2));
+  border-top: 1px solid var(--app-line);
+}
+
+.script-code-pre {
+  display: grid;
+  grid-template-columns: min-content 1fr;
+  margin: 0;
+  padding: 16px 0;
+  width: max-content;
+  min-width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--app-ink);
+}
+
+.script-code-line {
+  display: contents;
+}
+
+.script-code-line-number {
+  padding-left: 16px;
+  padding-right: 16px;
+  text-align: right;
+  color: var(--app-ink-subtle);
+  user-select: none;
+  border-right: 1px solid var(--app-line);
+  opacity: 0.6;
+}
+
+.script-code-line-text {
+  padding-left: 16px;
+  padding-right: 16px;
+  white-space: pre;
+}
+
+.script-code-line:hover .script-code-line-text {
+  background: color-mix(in oklch, var(--app-ink) 4%, transparent);
+}
+
+.script-code-line:hover .script-code-line-number {
+  background: color-mix(in oklch, var(--app-ink) 4%, transparent);
+  color: var(--app-accent);
+  opacity: 1;
+}
+
+/* 문법 하이라이팅 */
+.script-code-comment {
+  color: var(--app-ink-subtle);
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.script-code-string {
+  color: var(--app-ok);
+}
+
+.script-code-variable {
+  color: var(--app-warn-fg);
+}
+
+.script-code-keyword {
+  color: var(--app-accent);
+  font-weight: 600;
+}
+
 .mode-grid,
 .compare-grid {
   display: grid;

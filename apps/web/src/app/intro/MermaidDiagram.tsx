@@ -7,6 +7,78 @@ type MermaidDiagramProps = {
   title: string;
 };
 
+const BLOCKED_SVG_TAGS = new Set([
+  'a',
+  'audio',
+  'embed',
+  'foreignobject',
+  'iframe',
+  'image',
+  'link',
+  'meta',
+  'object',
+  'script',
+  'video',
+]);
+
+const URL_ATTRS = new Set(['href', 'xlink:href']);
+
+function sanitizeMermaidSvg(svg: string): string {
+  const fixedSvg = svg.replace(/<br([^>]*?)(?<!\/)>/gi, '<br$1/>');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(fixedSvg, 'image/svg+xml');
+
+  const parserError = doc.querySelector('parsererror');
+  if (parserError) {
+    throw new Error(
+      `Mermaid SVG sanitizer failed to parse rendered output: ${parserError.textContent}`,
+    );
+  }
+
+  for (const node of Array.from(doc.querySelectorAll('*'))) {
+    const tagName = node.tagName.toLowerCase();
+    if (BLOCKED_SVG_TAGS.has(tagName)) {
+      node.remove();
+      continue;
+    }
+
+    for (const attr of Array.from(node.attributes)) {
+      const attrName = attr.name.toLowerCase();
+      const attrValue = attr.value.trim();
+
+      if (attrName.startsWith('on')) {
+        node.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (URL_ATTRS.has(attrName) && attrValue && !attrValue.startsWith('#')) {
+        node.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (
+        attrName === 'style' &&
+        /url\s*\(\s*['"]?javascript:|@import|expression\s*\(/i.test(attrValue)
+      ) {
+        node.removeAttribute(attr.name);
+      }
+    }
+  }
+
+  for (const style of Array.from(doc.querySelectorAll('style'))) {
+    if (/url\s*\(\s*['"]?javascript:|@import|expression\s*\(/i.test(style.textContent ?? '')) {
+      style.remove();
+    }
+  }
+
+  const root = doc.documentElement;
+  if (root.tagName.toLowerCase() !== 'svg') {
+    throw new Error('Mermaid SVG sanitizer received non-SVG output');
+  }
+
+  return root.outerHTML;
+}
+
 export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
   const reactId = useId();
   const [svg, setSvg] = useState<string | null>(null);
@@ -25,6 +97,8 @@ export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
           startOnLoad: false,
           securityLevel: 'strict',
           theme: 'base',
+          htmlLabels: false,
+          flowchart: { htmlLabels: false },
           themeVariables: {
             background: '#fbfaf7',
             primaryColor: '#fbfaf7',
@@ -39,7 +113,8 @@ export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
         });
 
         const rendered = await mermaid.render(renderId, chart);
-        if (!cancelled) setSvg(rendered.svg);
+        const safeSvg = sanitizeMermaidSvg(rendered.svg);
+        if (!cancelled) setSvg(safeSvg);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Mermaid render failed');
       }

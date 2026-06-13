@@ -276,6 +276,43 @@ export default function SetupPage() {
           baseline으로 구조를 확인하고, 이후 CloudFront routing과 GitHub OIDC 승격 흐름으로
           고도화합니다.
         </p>
+        <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+          <a
+            href="https://github.com/blue45f/multi-environment-setting/blob/main/docs/SETUP.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              color: 'var(--app-accent)',
+              textDecoration: 'none',
+              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: '20px',
+              background: 'var(--app-panel)',
+              border: '1px solid var(--app-line-strong)',
+              transition: 'all 0.2s ease',
+              boxShadow: 'var(--app-shadow-sm)',
+            }}
+            className="original-link-badge"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+            </svg>
+            GitHub 원본 가이드 보기
+          </a>
+        </div>
       </section>
 
       <section className="guide-setup-principles" aria-labelledby="setup-principles-title">

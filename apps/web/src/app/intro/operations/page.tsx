@@ -17,6 +17,43 @@ export default function OperationsPage() {
           preview, staging, production은 같은 앱을 다른 책임과 권한으로 다루는 환경입니다. 이
           페이지는 운영 담당자나 리뷰어에게 “누가 언제 무엇을 확인하는지” 설명하기 위한 기준입니다.
         </p>
+        <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+          <a
+            href="https://github.com/blue45f/multi-environment-setting/blob/main/docs/ENVIRONMENTS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              color: 'var(--app-accent)',
+              textDecoration: 'none',
+              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: '20px',
+              background: 'var(--app-panel)',
+              border: '1px solid var(--app-line-strong)',
+              transition: 'all 0.2s ease',
+              boxShadow: 'var(--app-shadow-sm)',
+            }}
+            className="original-link-badge"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+            </svg>
+            GitHub 원본 가이드 보기
+          </a>
+        </div>
       </section>
 
       <section className="guide-principles" aria-labelledby="principles-title">
@@ -103,11 +140,11 @@ export default function OperationsPage() {
 
       <section className="guide-footer" aria-label="다음 행동">
         <div>
-          <p className="eyebrow">Back to overview</p>
-          <h2>개요로 돌아가 전체 흐름을 다시 확인</h2>
+          <p className="eyebrow">Next route</p>
+          <h2>내 프로젝트 맞춤형 환경 구축 설정 생성</h2>
         </div>
-        <Link className="guide-cta" href="/intro">
-          개요 페이지로 이동
+        <Link className="guide-cta" href="/intro/generator">
+          설계 제너레이터로 이동
         </Link>
       </section>
     </>

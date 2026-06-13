@@ -11,6 +11,13 @@ import { MermaidDiagram } from './MermaidDiagram';
 
 const guideRoutes = [
   {
+    href: '/intro/theory',
+    label: 'Theory',
+    title: '이론 및 핵심 Baseline 가이드',
+    detail:
+      '공통 Baseline 수립 원칙, AWS 리소스 매핑 및 수명주기와 보안 설계 등 이론적 기초를 확인합니다.',
+  },
+  {
     href: '/intro/setup',
     label: 'Setup',
     title: '도메인과 플랫폼 구축',
@@ -30,6 +37,13 @@ const guideRoutes = [
     title: '운영 책임과 용어',
     detail:
       'preview/staging/production 책임 분리, 초보자 시나리오, 용어사전, 운영 원칙을 확인합니다.',
+  },
+  {
+    href: '/intro/generator',
+    label: 'Generator',
+    title: '아키텍처 설계 제너레이터',
+    detail:
+      '프로젝트 환경변수를 입력하여 테라폼, 깃허브 액션, 런타임 검증 스키마 및 스크립트를 즉시 생성합니다.',
   },
 ];
 
@@ -156,8 +170,17 @@ export default function IntroPage() {
           <p className="eyebrow">markdown theory notes</p>
           <h2 id="theory-title">멀티베타 환경을 설계할 때 먼저 잡아야 할 이론</h2>
           <p>
-            아래 내용은 `docs/MULTI_BETA_GUIDE.md`에 같은 관점으로 정리되어 있습니다. 화면은
-            onboarding용 요약이고, Markdown 문서는 리뷰와 운영 인수인계용 기준선입니다.
+            아래 내용은{' '}
+            <a
+              href="https://github.com/blue45f/multi-environment-setting/blob/main/docs/MULTI_BETA_GUIDE.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--app-accent)', textDecoration: 'underline', fontWeight: 600 }}
+            >
+              docs/MULTI_BETA_GUIDE.md
+            </a>
+            에 같은 관점으로 정리되어 있습니다. 화면은 onboarding용 요약이고, Markdown 문서는 리뷰와
+            운영 인수인계용 기준선입니다.
           </p>
         </div>
 
@@ -203,10 +226,10 @@ export default function IntroPage() {
       <section className="guide-footer" aria-label="다음 행동">
         <div>
           <p className="eyebrow">Next route</p>
-          <h2>구축 경로부터 이어서 확인하세요</h2>
+          <h2>이론 가이드부터 이어서 확인하세요</h2>
         </div>
-        <Link className="guide-cta" href="/intro/setup">
-          설정 페이지로 이동
+        <Link className="guide-cta" href="/intro/theory">
+          이론 가이드로 이동
         </Link>
       </section>
     </>
