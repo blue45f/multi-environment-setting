@@ -1,9 +1,8 @@
-'use client';
-
-import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
+import { Link } from 'react-router-dom';
 
 import { useRuntimeConfig } from '@/lib/runtime-config';
+import { usePageMeta } from '@/lib/usePageMeta';
 
 const stageMeta: Record<
   string,
@@ -158,7 +157,13 @@ function StageBadge({ stage, testId }: { stage?: string; testId?: string }) {
   );
 }
 
-export default function Home() {
+export function HomePage() {
+  usePageMeta({
+    title: 'Multi-Environment Demo — Build once · Deploy many 멀티환경 레퍼런스',
+    description:
+      'PR마다 격리된 preview, staging 검증, production 승격까지 — 한 번 빌드한 정적 산출물에 env.json만 갈아끼워 배포하는 S3+CloudFront·GitHub OIDC 멀티환경 레퍼런스',
+  });
+
   const { config, error } = useRuntimeConfig();
   const [theme, cycleTheme] = useTheme();
 
@@ -169,14 +174,14 @@ export default function Home() {
     <main id="content" className="demo-page">
       <section className="hero-shell" aria-labelledby="hero-title">
         <div className="topbar" aria-label="데모 탐색">
-          <Link className="brand-chip" href="/">
+          <Link className="brand-chip" to="/">
             <span aria-hidden="true" className="brand-chip__grid" />
             Multi-env Lab
           </Link>
           <nav className="topbar__links" aria-label="주요 링크">
             <a href="#runtime">런타임 값</a>
             <a href="#pipeline">배포 흐름</a>
-            <Link href="/intro">소개 페이지</Link>
+            <Link to="/intro">소개 페이지</Link>
           </nav>
           <button
             type="button"
@@ -202,7 +207,7 @@ export default function Home() {
               배포 경로를 설명합니다.
             </p>
             <div className="hero-actions" aria-label="다음 행동">
-              <Link className="primary-action" href="/intro">
+              <Link className="primary-action" to="/intro">
                 아키텍처 가이드 읽기
               </Link>
               <a className="secondary-action" href="#runtime">

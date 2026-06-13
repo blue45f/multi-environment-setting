@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /pr-
+Disallow: /staging/
+
+Sitemap: https://multi-beta-guide.vercel.app/sitemap.xml

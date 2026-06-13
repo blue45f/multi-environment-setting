@@ -1,8 +1,14 @@
-'use client';
-
 import { useState } from 'react';
 
-export default function GeneratorPage() {
+import { usePageMeta } from '@/lib/usePageMeta';
+
+export function GeneratorPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 설계 제너레이터',
+    description:
+      '프로젝트 환경값을 입력해 Terraform, GitHub Actions, 런타임 검증 스키마와 스크립트를 즉시 생성하는 아키텍처 설계 제너레이터',
+  });
+
   // Developer inputs
   const [serviceName, setServiceName] = useState('web');
   const [awsRegion, setAwsRegion] = useState('ap-northeast-2');
@@ -2021,8 +2027,10 @@ echo "✅ Cache-optimized deployment completed successfully!"
         </div>
       </section>
 
-      {/* Styled JSX for subtabs to avoid polluting global scope */}
-      <style jsx global>{`
+      {/* 서브탭 스타일. Next styled-jsx(<style jsx global>) 대신 일반 <style> 로 전역 주입. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .active-subtab {
           background: var(--app-accent-soft) !important;
           color: var(--app-accent) !important;
@@ -2053,7 +2061,9 @@ echo "✅ Cache-optimized deployment completed successfully!"
             grid-template-columns: 1fr !important;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

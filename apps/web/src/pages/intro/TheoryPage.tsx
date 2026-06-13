@@ -1,8 +1,12 @@
-import fs from 'fs';
-import path from 'path';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
-import { MermaidDiagram } from '../MermaidDiagram';
-import Link from 'next/link';
+import { MermaidDiagram } from '@/components/MermaidDiagram';
+import { usePageMeta } from '@/lib/usePageMeta';
+
+// theory.md 는 빌드 타임에 ?raw 로 번들에 인라인된다(Next의 fs.readFileSync(process.cwd())
+// 서버 읽기를 SPA에 맞게 대체). 동일한 마크다운 본문을 그대로 파싱·렌더한다.
+import theoryMarkdown from './theory.md?raw';
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -37,7 +41,7 @@ function parseMarkdown(md: string): Block[] {
 
     // 2. Headings
     if (line.trim().startsWith('#')) {
-      const match = line.match(/^(#+)\s+(.*)$/);
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
       if (match) {
         blocks.push({
           type: 'heading',
@@ -95,13 +99,13 @@ function parseMarkdown(md: string): Block[] {
     }
 
     // 6. List
-    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+    const listMatch = line.match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
     if (listMatch) {
       const ordered = /^\d/.test(listMatch[2]);
       const items: string[] = [];
 
       while (i < lines.length) {
-        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
         if (!itemMatch) break;
         items.push(itemMatch[3].trim());
         i++;
@@ -142,7 +146,7 @@ function parseMarkdown(md: string): Block[] {
 // Helper to render inline markdown elements (bold, code, links)
 function renderInlineText(text: string) {
   // Simple regex replacements for bold (`**text**`), code (`` `code` ``), and links (`[text](url)`)
-  const parts: React.ReactNode[] = [];
+  const parts: ReactNode[] = [];
   let remaining = text;
   let keyIdx = 0;
 
@@ -244,21 +248,13 @@ function cleanMermaidChart(chart: string): string {
   return chart.replace(/<br\s*\/?>/gi, '\\n').replace(/</g, '&lt;');
 }
 
-export const metadata = {
-  title: '멀티베타 환경 개발가이드 · 이론 상세',
-  description: '다중 개발 서버 구축 가이드 이론 상세 설명 및 구현 원칙',
-};
+export function TheoryPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 이론 상세',
+    description: '다중 개발 서버 구축 가이드 이론 상세 설명 및 구현 원칙',
+  });
 
-export default function TheoryPage() {
-  const filePath = path.join(process.cwd(), 'src/app/intro/theory.md');
-  let blocks: Block[] = [];
-
-  try {
-    const mdContent = fs.readFileSync(filePath, 'utf-8');
-    blocks = parseMarkdown(mdContent);
-  } catch (error) {
-    console.error('Failed to read theory.md:', error);
-  }
+  const blocks: Block[] = parseMarkdown(theoryMarkdown);
 
   return (
     <div style={{ background: 'var(--app-bg)', minHeight: '100vh', color: 'var(--app-ink)' }}>
@@ -534,7 +530,7 @@ export default function TheoryPage() {
             <p className="eyebrow">Next route</p>
             <h2>플랫폼별 아키텍처 구축 설정 가이드</h2>
           </div>
-          <Link className="guide-cta" href="/intro/setup">
+          <Link className="guide-cta" to="/intro/setup">
             설정 페이지로 이동
           </Link>
         </section>

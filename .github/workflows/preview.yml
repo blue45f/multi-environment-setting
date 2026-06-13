@@ -34,7 +34,7 @@ jobs:
     env:
       SERVICE: ${{ matrix.service }}
       APP_DIR: apps/${{ matrix.service }}
-      OUTPUT_DIR: apps/${{ matrix.service }}/out
+      OUTPUT_DIR: apps/${{ matrix.service }}/dist
       PR: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v6

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -10,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 // - 전역 푸터는 wrap + ≤700px 컬럼 폴백을 유지한다.
 // jsdom 으로는 레이아웃 계산을 검증할 수 없으므로 globals.css 의 선언 자체를 계약으로 삼는다
 // (실 렌더링 검증은 Playwright smoke 영역).
-const css = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+const css = readFileSync(path.resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

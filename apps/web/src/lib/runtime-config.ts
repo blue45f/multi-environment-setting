@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 
 import { runtimeConfigSchema, type RuntimeConfig } from '../../env.schema';
