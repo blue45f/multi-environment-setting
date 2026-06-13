@@ -1,6 +1,8 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
-import { domainFlow, platformGuides, usageCommands } from '../guide-data';
+import { usePageMeta } from '@/lib/usePageMeta';
+
+import { domainFlow, platformGuides, usageCommands } from './guide-data';
 
 const setupPrinciples = [
   {
@@ -260,12 +262,12 @@ const deploymentFlow = [
   },
 ];
 
-export const metadata = {
-  title: '멀티베타 환경 개발가이드 · 설정',
-  description: '멀티베타 환경의 도메인, 플랫폼별 구축 경로, AWS rollout 순서',
-};
+export function SetupPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 설정',
+    description: '멀티베타 환경의 도메인, 플랫폼별 구축 경로, AWS rollout 순서',
+  });
 
-export default function SetupPage() {
   return (
     <>
       <section className="guide-page-hero" aria-labelledby="setup-title">
@@ -579,7 +581,7 @@ export default function SetupPage() {
           <p className="eyebrow">Next route</p>
           <h2>스크립트 사용법으로 이어서 이동</h2>
         </div>
-        <Link className="guide-cta" href="/intro/scripts">
+        <Link className="guide-cta" to="/intro/scripts">
           스크립트 페이지로 이동
         </Link>
       </section>

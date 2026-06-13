@@ -7,143 +7,149 @@
 // 접근 방식:
 //   1) custom 도메인: pr-123.preview.example.com           -> /${service}/pr-123/...
 //   2) 기본 도메인 테스트: <cf-domain>/pr-123/...           -> /${service}/pr-123/...
-// SPA fallback: 확장자 없는 경로/디렉터리는 그 PR의 index.html(앱 셸)로 보낸다.
+//
+// Vite SPA: 산출물은 단일 index.html(앱 셸) + 해시 자산(/assets/...)이다. 확장자 없는
+// 경로/디렉터리(= 클라이언트 라우트)는 그 PR의 루트 index.html로 폴백하고, 자산은
+// 절대 경로('/assets/...')로 요청되므로 기본 도메인 preview에서는 referer로 PR prefix를
+// 복원한다(Next의 '/_next/' 복원과 동일 패턴).
 
 function handler(event) {
-  var SERVICE = "${service}";
+  var SERVICE = '${service}';
   var request = event.request;
   var host = (request.headers.host && request.headers.host.value) || '';
   var label = host.split('.')[0]; // "pr-123" (custom 도메인)
 
-	  if (label.indexOf('pr-') !== 0) {
-	    // 기본 도메인: 경로 첫 세그먼트에서 pr-<n> 추출
-	    var seg = request.uri.split('/'); // "/pr-123/a" -> ["", "pr-123", "a"]
-	    if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
-	      label = seg[1];
-	      var rest = seg.slice(2).join('/');
-	      request.uri = rest === '' ? '/' : '/' + rest;
-	    }
-	  }
-	
-	  if (label.indexOf('pr-') !== 0) {
-	    // Next static export의 asset URL은 기본적으로 /_next/... 절대 경로다.
-	    // CloudFront 기본 도메인 preview(/pr-123/)에서는 asset 요청 URI에 PR 번호가 없으므로
-	    // 같은 문서에서 온 referer를 이용해 PR prefix를 복원한다. 문서 네비게이션이면 URL 자체를
-	    // /pr-<n>/... 로 정규화해 이후 env.json/asset 요청도 preview 컨텍스트를 잃지 않게 한다.
-	    var refererLabel = prLabelFromReferer((request.headers.referer && request.headers.referer.value) || '', host);
-	    if (refererLabel.indexOf('pr-') === 0 && isAllDigits(refererLabel.substring(3))) {
-	      if (isDocumentRequest(request.uri)) {
-	        return redirectToPreviewPath(refererLabel, request.uri, request.querystring);
-	      }
-	      label = refererLabel;
-	    }
-	  }
+  if (label.indexOf('pr-') !== 0) {
+    // 기본 도메인: 경로 첫 세그먼트에서 pr-<n> 추출
+    var seg = request.uri.split('/'); // "/pr-123/a" -> ["", "pr-123", "a"]
+    if (seg.length > 1 && seg[1].indexOf('pr-') === 0) {
+      label = seg[1];
+      var rest = seg.slice(2).join('/');
+      request.uri = rest === '' ? '/' : '/' + rest;
+    }
+  }
+
+  if (label.indexOf('pr-') !== 0) {
+    // Vite SPA의 자산 URL은 절대 경로 '/assets/...'다. CloudFront 기본 도메인
+    // preview(/pr-123/)에서는 자산 요청 URI에 PR 번호가 없으므로, 같은 문서에서 온
+    // referer로 PR prefix를 복원한다. 문서 네비게이션이면 URL 자체를 /pr-<n>/... 로
+    // 정규화해 이후 env.json/자산 요청도 preview 컨텍스트를 잃지 않게 한다.
+    var refererLabel = prLabelFromReferer(
+      (request.headers.referer && request.headers.referer.value) || '',
+      host,
+    );
+    if (refererLabel.indexOf('pr-') === 0 && isAllDigits(refererLabel.substring(3))) {
+      if (isDocumentRequest(request.uri)) {
+        return redirectToPreviewPath(refererLabel, request.uri, request.querystring);
+      }
+      label = refererLabel;
+    }
+  }
 
   var number = label.indexOf('pr-') === 0 ? label.substring(3) : '';
   if (!isAllDigits(number)) {
     return {
       statusCode: 404,
       statusDescription: 'Not Found',
-      headers: { 'content-type': { value: 'text/plain' } }
+      headers: { 'content-type': { value: 'text/plain' } },
     };
   }
 
+  // SPA 폴백: 모든 document 요청(디렉터리 또는 확장자 없는 경로)은 단일 루트 셸로
+  // 보낸다. 클라이언트 라우터가 실제 라우트를 렌더한다. 해시 자산(/assets/..., *.js/.css)
+  // 은 확장자가 있어 그대로 통과한다.
   var uri = request.uri;
-	  if (endsWithSlash(uri)) {
-	    uri += 'index.html';
-	  } else {
-    var last = uri.substring(uri.lastIndexOf('/') + 1);
-    if (last.indexOf('.') === -1) {
-      uri = '/index.html';
-    }
+  var lastSeg = uri.substring(uri.lastIndexOf('/') + 1);
+  if (endsWithSlash(uri) || lastSeg.indexOf('.') === -1) {
+    uri = '/index.html';
   }
 
   request.uri = '/' + SERVICE + '/' + label + uri;
-	  return request;
-	}
-	
-	function prLabelFromReferer(referer, currentHost) {
-	  var schemeIndex = referer.indexOf('://');
-	  if (schemeIndex !== -1) {
-	    var hostStart = schemeIndex + 3;
-	    var hostEnd = referer.indexOf('/', hostStart);
-	    var host = hostEnd === -1 ? referer.substring(hostStart) : referer.substring(hostStart, hostEnd);
-	    if (host !== currentHost) {
-	      return '';
-	    }
-	    var first = host.split('.')[0];
-	    if (first.indexOf('pr-') === 0) {
-	      return first;
-	    }
-	    if (hostEnd !== -1) {
-	      var path = referer.substring(hostEnd);
-	      if (path.indexOf('/pr-') === 0) {
-	        var end = path.indexOf('/', 1);
-	        return end === -1 ? path.substring(1) : path.substring(1, end);
-	      }
-	    }
-	  }
-	
-	  return '';
-	}
-	
-	function isDocumentRequest(uri) {
-	  if (uri.indexOf('/_next/') === 0) {
-	    return false;
-	  }
-	  if (endsWithSlash(uri)) {
-	    return true;
-	  }
-	  var last = uri.substring(uri.lastIndexOf('/') + 1);
-	  return last.indexOf('.') === -1;
-	}
-	
-	function redirectToPreviewPath(label, uri, querystring) {
-	  var location = '/' + label + uri;
-	  if (location.charAt(location.length - 1) !== '/') {
-	    var last = location.substring(location.lastIndexOf('/') + 1);
-	    if (last.indexOf('.') === -1) {
-	      location += '/';
-	    }
-	  }
-	  location += serializeQuerystring(querystring);
-	  return {
-	    statusCode: 302,
-	    statusDescription: 'Found',
-	    headers: {
-	      location: { value: location }
-	    }
-	  };
-	}
-	
-	function serializeQuerystring(querystring) {
-	  if (!querystring) {
-	    return '';
-	  }
-	  var parts = [];
-	  for (var name in querystring) {
-	    if (!Object.prototype.hasOwnProperty.call(querystring, name)) {
-	      continue;
-	    }
-	    var item = querystring[name];
-	    if (item.multiValue) {
-	      for (var i = 0; i < item.multiValue.length; i++) {
-	        parts.push(name + '=' + item.multiValue[i].value);
-	      }
-	    } else if (item.value === '') {
-	      parts.push(name);
-	    } else {
-	      parts.push(name + '=' + item.value);
-	    }
-	  }
-	  return parts.length === 0 ? '' : '?' + parts.join('&');
-	}
-	
-	function endsWithSlash(s) {
-	  return s.length > 0 && s.charAt(s.length - 1) === '/';
-	}
-	
-	function isAllDigits(s) {
+  return request;
+}
+
+function prLabelFromReferer(referer, currentHost) {
+  var schemeIndex = referer.indexOf('://');
+  if (schemeIndex !== -1) {
+    var hostStart = schemeIndex + 3;
+    var hostEnd = referer.indexOf('/', hostStart);
+    var host = hostEnd === -1 ? referer.substring(hostStart) : referer.substring(hostStart, hostEnd);
+    if (host !== currentHost) {
+      return '';
+    }
+    var first = host.split('.')[0];
+    if (first.indexOf('pr-') === 0) {
+      return first;
+    }
+    if (hostEnd !== -1) {
+      var path = referer.substring(hostEnd);
+      if (path.indexOf('/pr-') === 0) {
+        var end = path.indexOf('/', 1);
+        return end === -1 ? path.substring(1) : path.substring(1, end);
+      }
+    }
+  }
+
+  return '';
+}
+
+function isDocumentRequest(uri) {
+  if (uri.indexOf('/assets/') === 0) {
+    return false;
+  }
+  if (endsWithSlash(uri)) {
+    return true;
+  }
+  var last = uri.substring(uri.lastIndexOf('/') + 1);
+  return last.indexOf('.') === -1;
+}
+
+function redirectToPreviewPath(label, uri, querystring) {
+  var location = '/' + label + uri;
+  if (location.charAt(location.length - 1) !== '/') {
+    var last = location.substring(location.lastIndexOf('/') + 1);
+    if (last.indexOf('.') === -1) {
+      location += '/';
+    }
+  }
+  location += serializeQuerystring(querystring);
+  return {
+    statusCode: 302,
+    statusDescription: 'Found',
+    headers: {
+      location: { value: location },
+    },
+  };
+}
+
+function serializeQuerystring(querystring) {
+  if (!querystring) {
+    return '';
+  }
+  var parts = [];
+  for (var name in querystring) {
+    if (!Object.prototype.hasOwnProperty.call(querystring, name)) {
+      continue;
+    }
+    var item = querystring[name];
+    if (item.multiValue) {
+      for (var i = 0; i < item.multiValue.length; i++) {
+        parts.push(name + '=' + item.multiValue[i].value);
+      }
+    } else if (item.value === '') {
+      parts.push(name);
+    } else {
+      parts.push(name + '=' + item.value);
+    }
+  }
+  return parts.length === 0 ? '' : '?' + parts.join('&');
+}
+
+function endsWithSlash(s) {
+  return s.length > 0 && s.charAt(s.length - 1) === '/';
+}
+
+function isAllDigits(s) {
   if (s.length === 0) {
     return false;
   }

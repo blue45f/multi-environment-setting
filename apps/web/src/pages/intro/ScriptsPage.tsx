@@ -1,48 +1,17 @@
-import Link from 'next/link';
-import fs from 'fs';
-import path from 'path';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
-import { scriptCatalog, scriptPrinciples, scriptRunFlows } from '../guide-data';
+import { usePageMeta } from '@/lib/usePageMeta';
 
-export const metadata = {
-  title: '멀티베타 환경 개발가이드 · 스크립트',
-  description: '멀티베타 환경 구축과 운영에 쓰는 스크립트 사용법과 안전장치',
-};
-
-function getScriptContent(scriptName: string): string {
-  try {
-    const basePath = process.cwd();
-    // Next.js dev/build process runs in apps/web, so root scripts are at ../../scripts
-    let scriptsPath = path.join(basePath, '../../scripts', scriptName);
-
-    if (!fs.existsSync(scriptsPath)) {
-      // Fallback: search upward if running from a different directory
-      let current = basePath;
-      for (let i = 0; i < 5; i++) {
-        const candidate = path.join(current, 'scripts', scriptName);
-        if (fs.existsSync(candidate)) {
-          scriptsPath = candidate;
-          break;
-        }
-        const parent = path.dirname(current);
-        if (parent === current) break;
-        current = parent;
-      }
-    }
-
-    return fs.readFileSync(scriptsPath, 'utf8');
-  } catch (err) {
-    console.error(`Failed to read script ${scriptName}:`, err);
-    return `# Error reading script file: ${scriptName}`;
-  }
-}
+import { scriptCatalog, scriptPrinciples, scriptRunFlows } from './guide-data';
+import { getScriptContent } from './scriptSources';
 
 function tokenizeCodeLine(line: string) {
   const tokenRegex =
     /(#.*)|("[^"]*")|('[^']*')|(\$[a-zA-Z0-9_]+|\$\{[a-zA-Z0-9_]+\})|\b(if|then|else|fi|exit|echo|set|cd|for|in|do|done|function|return|local|export|eval|printf)\b/g;
 
   let lastIndex = 0;
-  const result: React.ReactNode[] = [];
+  const result: ReactNode[] = [];
   let match;
 
   while ((match = tokenRegex.exec(line)) !== null) {
@@ -85,10 +54,15 @@ function tokenizeCodeLine(line: string) {
     result.push(line.substring(lastIndex));
   }
 
-  return result.length > 0 ? result : line || '\u00A0';
+  return result.length > 0 ? result : line || ' ';
 }
 
-export default function ScriptsPage() {
+export function ScriptsPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 스크립트',
+    description: '멀티베타 환경 구축과 운영에 쓰는 스크립트 사용법과 안전장치',
+  });
+
   return (
     <>
       <section className="guide-page-hero" aria-labelledby="scripts-page-title">
@@ -248,7 +222,7 @@ export default function ScriptsPage() {
           <p className="eyebrow">Next route</p>
           <h2>운영 책임과 용어로 이어서 이동</h2>
         </div>
-        <Link className="guide-cta" href="/intro/operations">
+        <Link className="guide-cta" to="/intro/operations">
           운영 페이지로 이동
         </Link>
       </section>

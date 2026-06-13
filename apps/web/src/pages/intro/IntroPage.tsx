@@ -1,4 +1,7 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
+
+import { MermaidDiagram } from '@/components/MermaidDiagram';
+import { usePageMeta } from '@/lib/usePageMeta';
 
 import {
   architectureFlow,
@@ -7,39 +10,38 @@ import {
   representativeUrl,
   theoryNotes,
 } from './guide-data';
-import { MermaidDiagram } from './MermaidDiagram';
 
 const guideRoutes = [
   {
-    href: '/intro/theory',
+    to: '/intro/theory',
     label: 'Theory',
     title: '이론 및 핵심 Baseline 가이드',
     detail:
       '공통 Baseline 수립 원칙, AWS 리소스 매핑 및 수명주기와 보안 설계 등 이론적 기초를 확인합니다.',
   },
   {
-    href: '/intro/setup',
+    to: '/intro/setup',
     label: 'Setup',
     title: '도메인과 플랫폼 구축',
     detail:
       'Vercel alias, AWS preview domain, S3/CloudFront, GitHub Actions 설정 경로를 따로 봅니다.',
   },
   {
-    href: '/intro/scripts',
+    to: '/intro/scripts',
     label: 'Scripts',
     title: '간단 적용 스크립트',
     detail:
       'preflight, bootstrap, 배포, 승격, 롤백, cleanup 스크립트 사용법과 주의사항을 정리합니다.',
   },
   {
-    href: '/intro/operations',
+    to: '/intro/operations',
     label: 'Operations',
     title: '운영 책임과 용어',
     detail:
       'preview/staging/production 책임 분리, 초보자 시나리오, 용어사전, 운영 원칙을 확인합니다.',
   },
   {
-    href: '/intro/generator',
+    to: '/intro/generator',
     label: 'Generator',
     title: '아키텍처 설계 제너레이터',
     detail:
@@ -47,13 +49,13 @@ const guideRoutes = [
   },
 ];
 
-export const metadata = {
-  title: '멀티베타 환경 개발가이드 · 개요',
-  description:
-    'Next.js, React.js 같은 정적 프론트엔드 리소스의 preview, staging, production 멀티베타 환경 개요',
-};
+export function IntroPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 개요',
+    description:
+      'Next.js, React.js 같은 정적 프론트엔드 리소스의 preview, staging, production 멀티베타 환경 개요',
+  });
 
-export default function IntroPage() {
   return (
     <>
       <section className="guide-hero" aria-labelledby="intro-title">
@@ -101,7 +103,7 @@ export default function IntroPage() {
 
         <div className="guide-route-grid">
           {guideRoutes.map((route) => (
-            <Link key={route.href} className="guide-route-card" href={route.href}>
+            <Link key={route.to} className="guide-route-card" to={route.to}>
               <span>{route.label}</span>
               <h3>{route.title}</h3>
               <p>{route.detail}</p>
@@ -228,7 +230,7 @@ export default function IntroPage() {
           <p className="eyebrow">Next route</p>
           <h2>이론 가이드부터 이어서 확인하세요</h2>
         </div>
-        <Link className="guide-cta" href="/intro/theory">
+        <Link className="guide-cta" to="/intro/theory">
           이론 가이드로 이동
         </Link>
       </section>

@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_DIR: apps/${{ matrix.service }}
-      OUTPUT_DIR: apps/${{ matrix.service }}/out
+      OUTPUT_DIR: apps/${{ matrix.service }}/dist
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -84,7 +84,7 @@ jobs:
     env:
       SERVICE: ${{ matrix.service }}
       APP_DIR: apps/${{ matrix.service }}
-      OUTPUT_DIR: apps/${{ matrix.service }}/out
+      OUTPUT_DIR: apps/${{ matrix.service }}/dist
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v8
@@ -149,7 +149,7 @@ jobs:
     env:
       SERVICE: ${{ matrix.service }}
       APP_DIR: apps/${{ matrix.service }}
-      OUTPUT_DIR: apps/${{ matrix.service }}/out
+      OUTPUT_DIR: apps/${{ matrix.service }}/dist
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v8

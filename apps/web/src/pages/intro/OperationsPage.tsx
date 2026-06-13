@@ -1,13 +1,15 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
-import { environmentModes, glossary, principles, walkthrough } from '../guide-data';
+import { usePageMeta } from '@/lib/usePageMeta';
 
-export const metadata = {
-  title: '멀티베타 환경 개발가이드 · 운영',
-  description: '멀티베타 환경의 운영 책임, 아키텍처 원칙, 시나리오와 용어',
-};
+import { environmentModes, glossary, principles, walkthrough } from './guide-data';
 
-export default function OperationsPage() {
+export function OperationsPage() {
+  usePageMeta({
+    title: '멀티베타 환경 개발가이드 · 운영',
+    description: '멀티베타 환경의 운영 책임, 아키텍처 원칙, 시나리오와 용어',
+  });
+
   return (
     <>
       <section className="guide-page-hero" aria-labelledby="operations-title">
@@ -143,7 +145,7 @@ export default function OperationsPage() {
           <p className="eyebrow">Next route</p>
           <h2>내 프로젝트 맞춤형 환경 구축 설정 생성</h2>
         </div>
-        <Link className="guide-cta" href="/intro/generator">
+        <Link className="guide-cta" to="/intro/generator">
           설계 제너레이터로 이동
         </Link>
       </section>
