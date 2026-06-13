@@ -1,7 +1,4 @@
-import { Link } from 'react-router-dom';
-
-import { MermaidDiagram } from '@/components/MermaidDiagram';
-import { usePageMeta } from '@/lib/usePageMeta';
+import { Link } from 'react-router-dom'
 
 import {
   architectureFlow,
@@ -9,7 +6,10 @@ import {
   mermaidDiagrams,
   representativeUrl,
   theoryNotes,
-} from './guide-data';
+} from './guide-data'
+
+import { MermaidDiagram } from '@/components/MermaidDiagram'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 const guideRoutes = [
   {
@@ -47,14 +47,14 @@ const guideRoutes = [
     detail:
       '프로젝트 환경변수를 입력하여 테라폼, 깃허브 액션, 런타임 검증 스키마 및 스크립트를 즉시 생성합니다.',
   },
-];
+]
 
 export function IntroPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 개요',
     description:
       'Next.js, React.js 같은 정적 프론트엔드 리소스의 preview, staging, production 멀티베타 환경 개요',
-  });
+  })
 
   return (
     <>
@@ -235,5 +235,5 @@ export function IntroPage() {
         </Link>
       </section>
     </>
-  );
+  )
 }

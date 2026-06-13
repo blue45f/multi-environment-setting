@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
 
-import { MermaidDiagram } from '@/components/MermaidDiagram';
-import { usePageMeta } from '@/lib/usePageMeta';
+import theoryMarkdown from './theory.md?raw'
+
+import type { ReactNode } from 'react'
+
+import { MermaidDiagram } from '@/components/MermaidDiagram'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 // theory.md 는 빌드 타임에 ?raw 로 번들에 인라인된다(Next의 fs.readFileSync(process.cwd())
 // 서버 읽기를 SPA에 맞게 대체). 동일한 마크다운 본문을 그대로 파싱·렌더한다.
-import theoryMarkdown from './theory.md?raw';
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -15,61 +17,61 @@ type Block =
   | { type: 'list'; ordered: boolean; items: string[] }
   | { type: 'code'; lang: string; code: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
-  | { type: 'hr' };
+  | { type: 'hr' }
 
 function parseMarkdown(md: string): Block[] {
-  const lines = md.split(/\r?\n/);
-  const blocks: Block[] = [];
-  let i = 0;
+  const lines = md.split(/\r?\n/)
+  const blocks: Block[] = []
+  let i = 0
 
   while (i < lines.length) {
-    const line = lines[i];
+    const line = lines[i]
 
     // 1. Code Block
     if (line.trim().startsWith('```')) {
-      const lang = line.trim().slice(3).trim();
-      let code = '';
-      i++;
+      const lang = line.trim().slice(3).trim()
+      let code = ''
+      i++
       while (i < lines.length && !lines[i].trim().startsWith('```')) {
-        code += lines[i] + '\n';
-        i++;
+        code += lines[i] + '\n'
+        i++
       }
-      blocks.push({ type: 'code', lang, code: code.trim() });
-      i++;
-      continue;
+      blocks.push({ type: 'code', lang, code: code.trim() })
+      i++
+      continue
     }
 
     // 2. Headings
     if (line.trim().startsWith('#')) {
-      const match = line.match(/^(#{1,6})\s+(.*)$/);
+      const match = line.match(/^(#{1,6})\s+(.*)$/)
       if (match) {
         blocks.push({
           type: 'heading',
           level: match[1].length,
           text: match[2].trim(),
-        });
+        })
       }
-      i++;
-      continue;
+      i++
+      continue
     }
 
     // 3. Blockquote
     if (line.trim().startsWith('>')) {
-      let text = '';
+      let text = ''
       while (i < lines.length && lines[i].trim().startsWith('>')) {
-        const content = lines[i].trim().slice(1).trim();
-        text += (text ? ' ' : '') + content;
-        i++;
+        const content = lines[i].trim().slice(1).trim()
+        text += (text ? ' ' : '') + content
+        i++
       }
-      blocks.push({ type: 'blockquote', text });
-      continue;
+      blocks.push({ type: 'blockquote', text })
+      continue
     }
 
     // 4. Horizontal Rule
     if (line.trim() === '---' || line.trim() === '***') {
-      blocks.push({ type: 'hr' });
-      i++;
-      continue;
+      blocks.push({ type: 'hr' })
+      i++
+      continue
     }
 
     // 5. Table
@@ -77,53 +79,53 @@ function parseMarkdown(md: string): Block[] {
       const headers = line
         .split('|')
         .map((c) => c.trim())
-        .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+        .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
 
-      i++; // Move past header
+      i++ // Move past header
       // Check for separator line (e.g., |---|---|)
       if (i < lines.length && lines[i].trim().startsWith('|') && lines[i].includes('-')) {
-        i++;
+        i++
       }
 
-      const rows: string[][] = [];
+      const rows: string[][] = []
       while (i < lines.length && lines[i].trim().startsWith('|')) {
         const rowCells = lines[i]
           .split('|')
           .map((c) => c.trim())
-          .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-        rows.push(rowCells);
-        i++;
+          .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
+        rows.push(rowCells)
+        i++
       }
-      blocks.push({ type: 'table', headers, rows });
-      continue;
+      blocks.push({ type: 'table', headers, rows })
+      continue
     }
 
     // 6. List
-    const listMatch = line.match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
+    const listMatch = line.match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/)
     if (listMatch) {
-      const ordered = /^\d/.test(listMatch[2]);
-      const items: string[] = [];
+      const ordered = /^\d/.test(listMatch[2])
+      const items: string[] = []
 
       while (i < lines.length) {
-        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
-        if (!itemMatch) break;
-        items.push(itemMatch[3].trim());
-        i++;
+        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/)
+        if (!itemMatch) break
+        items.push(itemMatch[3].trim())
+        i++
       }
 
-      blocks.push({ type: 'list', ordered, items });
-      continue;
+      blocks.push({ type: 'list', ordered, items })
+      continue
     }
 
     // 7. Empty lines
     if (line.trim() === '') {
-      i++;
-      continue;
+      i++
+      continue
     }
 
     // 8. Paragraph (default fallback)
-    let pText = line.trim();
-    i++;
+    let pText = line.trim()
+    i++
     // Accumulate consecutive paragraph lines
     while (
       i < lines.length &&
@@ -134,55 +136,55 @@ function parseMarkdown(md: string): Block[] {
       !lines[i].trim().startsWith('```') &&
       !/^(\s*)([-*+]|\d+\.)\s+/.test(lines[i])
     ) {
-      pText += ' ' + lines[i].trim();
-      i++;
+      pText += ' ' + lines[i].trim()
+      i++
     }
-    blocks.push({ type: 'paragraph', text: pText });
+    blocks.push({ type: 'paragraph', text: pText })
   }
 
-  return blocks;
+  return blocks
 }
 
 // Helper to render inline markdown elements (bold, code, links)
 function renderInlineText(text: string) {
   // Simple regex replacements for bold (`**text**`), code (`` `code` ``), and links (`[text](url)`)
-  const parts: ReactNode[] = [];
-  let remaining = text;
-  let keyIdx = 0;
+  const parts: ReactNode[] = []
+  let remaining = text
+  let keyIdx = 0
 
   while (remaining.length > 0) {
-    const boldIndex = remaining.indexOf('**');
-    const codeIndex = remaining.indexOf('`');
-    const linkIndex = remaining.indexOf('[');
+    const boldIndex = remaining.indexOf('**')
+    const codeIndex = remaining.indexOf('`')
+    const linkIndex = remaining.indexOf('[')
 
     const minIdx = Math.min(
       boldIndex === -1 ? Infinity : boldIndex,
       codeIndex === -1 ? Infinity : codeIndex,
-      linkIndex === -1 ? Infinity : linkIndex,
-    );
+      linkIndex === -1 ? Infinity : linkIndex
+    )
 
     if (minIdx === Infinity) {
-      parts.push(remaining);
-      break;
+      parts.push(remaining)
+      break
     }
 
     // Add prefix plain text
     if (minIdx > 0) {
-      parts.push(remaining.substring(0, minIdx));
-      remaining = remaining.substring(minIdx);
+      parts.push(remaining.substring(0, minIdx))
+      remaining = remaining.substring(minIdx)
     }
 
     if (remaining.startsWith('**')) {
-      const endIdx = remaining.indexOf('**', 2);
+      const endIdx = remaining.indexOf('**', 2)
       if (endIdx !== -1) {
-        parts.push(<strong key={keyIdx++}>{remaining.substring(2, endIdx)}</strong>);
-        remaining = remaining.substring(endIdx + 2);
+        parts.push(<strong key={keyIdx++}>{remaining.substring(2, endIdx)}</strong>)
+        remaining = remaining.substring(endIdx + 2)
       } else {
-        parts.push('**');
-        remaining = remaining.substring(2);
+        parts.push('**')
+        remaining = remaining.substring(2)
       }
     } else if (remaining.startsWith('`')) {
-      const endIdx = remaining.indexOf('`', 1);
+      const endIdx = remaining.indexOf('`', 1)
       if (endIdx !== -1) {
         parts.push(
           <code
@@ -196,21 +198,21 @@ function renderInlineText(text: string) {
             key={keyIdx++}
           >
             {remaining.substring(1, endIdx)}
-          </code>,
-        );
-        remaining = remaining.substring(endIdx + 1);
+          </code>
+        )
+        remaining = remaining.substring(endIdx + 1)
       } else {
-        parts.push('`');
-        remaining = remaining.substring(1);
+        parts.push('`')
+        remaining = remaining.substring(1)
       }
     } else if (remaining.startsWith('[')) {
-      const closingBracket = remaining.indexOf(']');
-      const openingParen = remaining.indexOf('(', closingBracket);
-      const closingParen = remaining.indexOf(')', openingParen);
+      const closingBracket = remaining.indexOf(']')
+      const openingParen = remaining.indexOf('(', closingBracket)
+      const closingParen = remaining.indexOf(')', openingParen)
 
       if (closingBracket !== -1 && openingParen === closingBracket + 1 && closingParen !== -1) {
-        const linkText = remaining.substring(1, closingBracket);
-        const linkUrl = remaining.substring(openingParen + 1, closingParen);
+        const linkText = remaining.substring(1, closingBracket)
+        const linkUrl = remaining.substring(openingParen + 1, closingParen)
 
         // Render external or internal link
         if (linkUrl.startsWith('http') || linkUrl.startsWith('mailto')) {
@@ -223,38 +225,38 @@ function renderInlineText(text: string) {
               key={keyIdx++}
             >
               {linkText}
-            </a>,
-          );
+            </a>
+          )
         } else {
           // Normalize relative local path guides to our UI sections if applicable
           parts.push(
             <span style={{ color: 'var(--app-ink)', fontWeight: 700 }} key={keyIdx++}>
               {linkText}
-            </span>,
-          );
+            </span>
+          )
         }
-        remaining = remaining.substring(closingParen + 1);
+        remaining = remaining.substring(closingParen + 1)
       } else {
-        parts.push('[');
-        remaining = remaining.substring(1);
+        parts.push('[')
+        remaining = remaining.substring(1)
       }
     }
   }
 
-  return parts;
+  return parts
 }
 
 function cleanMermaidChart(chart: string): string {
-  return chart.replace(/<br\s*\/?>/gi, '\\n').replace(/</g, '&lt;');
+  return chart.replace(/<br\s*\/?>/gi, '\\n').replace(/</g, '&lt;')
 }
 
 export function TheoryPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 이론 상세',
     description: '다중 개발 서버 구축 가이드 이론 상세 설명 및 구현 원칙',
-  });
+  })
 
-  const blocks: Block[] = parseMarkdown(theoryMarkdown);
+  const blocks: Block[] = parseMarkdown(theoryMarkdown)
 
   return (
     <div style={{ background: 'var(--app-bg)', minHeight: '100vh', color: 'var(--app-ink)' }}>
@@ -338,11 +340,11 @@ export function TheoryPage() {
           {blocks.map((block, idx) => {
             switch (block.type) {
               case 'heading': {
-                const level = Math.min(block.level + 1, 6);
-                const id = block.text.toLowerCase().replace(/[^a-z0-9ㄱ-ㅎㅏ-ㅣ가-힣]/g, '-');
-                const borderBottom = block.level <= 2 ? '1px solid var(--app-line)' : 'none';
-                const marginTop = block.level === 1 ? '40px' : block.level === 2 ? '32px' : '20px';
-                const paddingBottom = block.level <= 2 ? '8px' : '0';
+                const level = Math.min(block.level + 1, 6)
+                const id = block.text.toLowerCase().replace(/[^a-z0-9ㄱ-ㅎㅏ-ㅣ가-힣]/g, '-')
+                const borderBottom = block.level <= 2 ? '1px solid var(--app-line)' : 'none'
+                const marginTop = block.level === 1 ? '40px' : block.level === 2 ? '32px' : '20px'
+                const paddingBottom = block.level <= 2 ? '8px' : '0'
 
                 const headingStyle = {
                   marginTop,
@@ -351,43 +353,43 @@ export function TheoryPage() {
                   borderBottom,
                   paddingBottom,
                   color: block.level === 1 ? 'var(--app-ink)' : 'var(--app-ink-muted)',
-                };
+                }
 
                 if (level === 1)
                   return (
                     <h1 key={idx} id={id} style={headingStyle}>
                       {block.text}
                     </h1>
-                  );
+                  )
                 if (level === 2)
                   return (
                     <h2 key={idx} id={id} style={headingStyle}>
                       {block.text}
                     </h2>
-                  );
+                  )
                 if (level === 3)
                   return (
                     <h3 key={idx} id={id} style={headingStyle}>
                       {block.text}
                     </h3>
-                  );
+                  )
                 if (level === 4)
                   return (
                     <h4 key={idx} id={id} style={headingStyle}>
                       {block.text}
                     </h4>
-                  );
+                  )
                 if (level === 5)
                   return (
                     <h5 key={idx} id={id} style={headingStyle}>
                       {block.text}
                     </h5>
-                  );
+                  )
                 return (
                   <h6 key={idx} id={id} style={headingStyle}>
                     {block.text}
                   </h6>
-                );
+                )
               }
               case 'paragraph':
                 return (
@@ -397,7 +399,7 @@ export function TheoryPage() {
                   >
                     {renderInlineText(block.text)}
                   </p>
-                );
+                )
               case 'blockquote':
                 return (
                   <blockquote
@@ -415,7 +417,7 @@ export function TheoryPage() {
                   >
                     {renderInlineText(block.text)}
                   </blockquote>
-                );
+                )
               case 'hr':
                 return (
                   <hr
@@ -426,9 +428,9 @@ export function TheoryPage() {
                       margin: '32px 0',
                     }}
                   />
-                );
+                )
               case 'list': {
-                const ListTag = block.ordered ? 'ol' : 'ul';
+                const ListTag = block.ordered ? 'ol' : 'ul'
                 return (
                   <ListTag
                     key={idx}
@@ -440,7 +442,7 @@ export function TheoryPage() {
                       </li>
                     ))}
                   </ListTag>
-                );
+                )
               }
               case 'code': {
                 if (block.lang === 'mermaid') {
@@ -460,7 +462,7 @@ export function TheoryPage() {
                         title="이론 다이어그램"
                       />
                     </div>
-                  );
+                  )
                 }
                 return (
                   <pre
@@ -478,7 +480,7 @@ export function TheoryPage() {
                   >
                     <code>{block.code}</code>
                   </pre>
-                );
+                )
               }
               case 'table':
                 return (
@@ -513,9 +515,9 @@ export function TheoryPage() {
                       </tbody>
                     </table>
                   </div>
-                );
+                )
               default:
-                return null;
+                return null
             }
           })}
         </div>
@@ -536,5 +538,5 @@ export function TheoryPage() {
         </section>
       </section>
     </div>
-  );
+  )
 }

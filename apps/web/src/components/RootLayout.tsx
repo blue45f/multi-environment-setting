@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom'
 
-import { PwaRegister } from './PwaRegister';
+import { PwaRegister } from './PwaRegister'
 
 // 루트 레이아웃 — Next app/layout.tsx 의 <html>/<body> 골격은 index.html 로 이동했고,
 // 여기서는 스킵 링크 · PWA 등록 · 라우트 본문(<Outlet/>) · 전역 푸터만 렌더한다.
@@ -8,7 +8,7 @@ const LEGAL_LINKS = {
   terms: 'https://termsdesk.vercel.app/p/multi-environment-setting/terms-of-service',
   privacy: 'https://termsdesk.vercel.app/p/multi-environment-setting/privacy-policy',
   support: 'https://termsdesk.vercel.app/support/multi-environment-setting',
-};
+}
 
 export function RootLayout() {
   return (
@@ -33,5 +33,5 @@ export function RootLayout() {
         <p>Multi Environment Setting · TermsDesk 포트폴리오</p>
       </footer>
     </>
-  );
+  )
 }

@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
 
-import { usePageMeta } from '@/lib/usePageMeta';
+import { domainFlow, platformGuides, usageCommands } from './guide-data'
 
-import { domainFlow, platformGuides, usageCommands } from './guide-data';
+import { usePageMeta } from '@/lib/usePageMeta'
 
 const setupPrinciples = [
   {
@@ -35,7 +35,7 @@ const setupPrinciples = [
     detail:
       'production job은 GitHub `production` environment에 묶입니다. 이 environment에 required reviewer와 main 브랜치 제한을 걸면, AWS role trust 조건과 GitHub 승인 게이트가 같이 작동합니다.',
   },
-];
+]
 
 const setupExecutionSteps = [
   {
@@ -73,7 +73,7 @@ const setupExecutionSteps = [
     detail:
       'AWS 전에는 로컬 static serving으로 확인하고, AWS 후에는 PR preview와 staging CloudFront URL에서 Playwright smoke를 확인합니다.',
   },
-];
+]
 
 const terraformVariableGroups = [
   {
@@ -154,7 +154,7 @@ const terraformVariableGroups = [
       ],
     ],
   },
-];
+]
 
 const awsResourceLayers = [
   {
@@ -209,7 +209,7 @@ const awsResourceLayers = [
     detail:
       '서비스마다 preview/staging/production/cleanup 역할을 만듭니다. trust는 GitHub environment claim으로 제한하고, 권한은 서비스 prefix와 해당 CloudFront distribution으로 좁힙니다.',
   },
-];
+]
 
 const githubSettings = [
   {
@@ -237,7 +237,7 @@ const githubSettings = [
     value: '`preview`, `staging`, `production`',
     use: 'OIDC trust의 `environment:<env>` claim과 일치해야 합니다. production은 reviewer와 main 브랜치 제한을 겁니다.',
   },
-];
+]
 
 const deploymentFlow = [
   {
@@ -260,13 +260,13 @@ const deploymentFlow = [
     trigger: 'PR close 또는 매일 03:00 KST schedule',
     flow: 'cleanup role AssumeRole → closed PR은 즉시 `/<service>/pr-<n>` 삭제 → schedule은 open PR 보존, grace period, max deletion, dry-run 리포트로 안전하게 정리',
   },
-];
+]
 
 export function SetupPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 설정',
     description: '멀티베타 환경의 도메인, 플랫폼별 구축 경로, AWS rollout 순서',
-  });
+  })
 
   return (
     <>
@@ -586,5 +586,5 @@ export function SetupPage() {
         </Link>
       </section>
     </>
-  );
+  )
 }

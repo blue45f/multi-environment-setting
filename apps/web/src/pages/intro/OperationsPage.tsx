@@ -1,14 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
 
-import { usePageMeta } from '@/lib/usePageMeta';
+import { environmentModes, glossary, principles, walkthrough } from './guide-data'
 
-import { environmentModes, glossary, principles, walkthrough } from './guide-data';
+import { usePageMeta } from '@/lib/usePageMeta'
 
 export function OperationsPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 운영',
     description: '멀티베타 환경의 운영 책임, 아키텍처 원칙, 시나리오와 용어',
-  });
+  })
 
   return (
     <>
@@ -150,5 +150,5 @@ export function OperationsPage() {
         </Link>
       </section>
     </>
-  );
+  )
 }

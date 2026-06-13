@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom'
 
 const guideLinks = [
   { to: '/intro', label: '개요' },
@@ -7,7 +7,7 @@ const guideLinks = [
   { to: '/intro/scripts', label: '스크립트' },
   { to: '/intro/operations', label: '운영' },
   { to: '/intro/generator', label: '설계 제너레이터' },
-];
+]
 
 export function IntroLayout() {
   return (
@@ -26,5 +26,5 @@ export function IntroLayout() {
       </nav>
       <Outlet />
     </main>
-  );
+  )
 }

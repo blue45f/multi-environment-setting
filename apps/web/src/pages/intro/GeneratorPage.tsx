@@ -1,44 +1,44 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
-import { usePageMeta } from '@/lib/usePageMeta';
+import { usePageMeta } from '@/lib/usePageMeta'
 
 export function GeneratorPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 설계 제너레이터',
     description:
       '프로젝트 환경값을 입력해 Terraform, GitHub Actions, 런타임 검증 스키마와 스크립트를 즉시 생성하는 아키텍처 설계 제너레이터',
-  });
+  })
 
   // Developer inputs
-  const [serviceName, setServiceName] = useState('web');
-  const [awsRegion, setAwsRegion] = useState('ap-northeast-2');
-  const [awsAccountId, setAwsAccountId] = useState('123456789012');
-  const [githubOwner, setGithubOwner] = useState('your-github-username');
-  const [githubRepo, setGithubRepo] = useState('your-repo-name');
-  const [enableCustomDomain, setEnableCustomDomain] = useState(false);
-  const [apexDomain, setApexDomain] = useState('example.com');
-  const [previewSubdomain, setPreviewSubdomain] = useState('preview');
-  const [stagingHost, setStagingHost] = useState('staging.example.com');
-  const [productionHost, setProductionHost] = useState('www.example.com');
-  const [hostedZoneId, setHostedZoneId] = useState('Z0123456789ABCDEFGHIJ');
-  const [buildOutputDir, setBuildOutputDir] = useState('out');
-  const [packageManager, setPackageManager] = useState('pnpm');
+  const [serviceName, setServiceName] = useState('web')
+  const [awsRegion, setAwsRegion] = useState('ap-northeast-2')
+  const [awsAccountId, setAwsAccountId] = useState('123456789012')
+  const [githubOwner, setGithubOwner] = useState('your-github-username')
+  const [githubRepo, setGithubRepo] = useState('your-repo-name')
+  const [enableCustomDomain, setEnableCustomDomain] = useState(false)
+  const [apexDomain, setApexDomain] = useState('example.com')
+  const [previewSubdomain, setPreviewSubdomain] = useState('preview')
+  const [stagingHost, setStagingHost] = useState('staging.example.com')
+  const [productionHost, setProductionHost] = useState('www.example.com')
+  const [hostedZoneId, setHostedZoneId] = useState('Z0123456789ABCDEFGHIJ')
+  const [buildOutputDir, setBuildOutputDir] = useState('out')
+  const [packageManager, setPackageManager] = useState('pnpm')
 
   // Interactive UI states
-  const [activeTab, setActiveTab] = useState<'iac' | 'cicd' | 'app' | 'scripts'>('iac');
-  const [activeSubTab, setActiveSubTab] = useState<string>('tfvars');
-  const [copiedState, setCopiedState] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<'iac' | 'cicd' | 'app' | 'scripts'>('iac')
+  const [activeSubTab, setActiveSubTab] = useState<string>('tfvars')
+  const [copiedState, setCopiedState] = useState<Record<string, boolean>>({})
 
   const handleCopy = (key: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedState((prev) => ({ ...prev, [key]: true }));
+    navigator.clipboard.writeText(text)
+    setCopiedState((prev) => ({ ...prev, [key]: true }))
     setTimeout(() => {
-      setCopiedState((prev) => ({ ...prev, [key]: false }));
-    }, 2000);
-  };
+      setCopiedState((prev) => ({ ...prev, [key]: false }))
+    }, 2000)
+  }
 
   // S3 Bucket Name
-  const bucketName = `${serviceName}-frontend-artifacts-${awsAccountId}-${awsRegion}`;
+  const bucketName = `${serviceName}-frontend-artifacts-${awsAccountId}-${awsRegion}`
 
   // Package manager commands
   const installCmd =
@@ -46,31 +46,31 @@ export function GeneratorPage() {
       ? 'pnpm install --frozen-lockfile'
       : packageManager === 'yarn'
         ? 'yarn install --frozen-lockfile'
-        : 'npm ci';
+        : 'npm ci'
   const runBuildCmd =
     packageManager === 'pnpm'
       ? 'pnpm build'
       : packageManager === 'yarn'
         ? 'yarn build'
-        : 'npm run build';
+        : 'npm run build'
   const runLintCmd =
     packageManager === 'pnpm'
       ? 'pnpm lint'
       : packageManager === 'yarn'
         ? 'yarn lint'
-        : 'npm run lint';
+        : 'npm run lint'
   const runTypecheckCmd =
     packageManager === 'pnpm'
       ? 'pnpm typecheck'
       : packageManager === 'yarn'
         ? 'yarn typecheck'
-        : 'npm run typecheck';
+        : 'npm run typecheck'
   const runTestCmd =
     packageManager === 'pnpm'
       ? 'pnpm test'
       : packageManager === 'yarn'
         ? 'yarn test'
-        : 'npm run test';
+        : 'npm run test'
 
   // 1. Terraform tfvars
   const tfvarsCode = `# infra/terraform/terraform.tfvars
@@ -113,7 +113,7 @@ hosted_zone_id    = "${hostedZoneId}"
 # 수명주기 설정 (preview는 14일 후 자동 만료, release 이력은 90일 보관)
 preview_expiration_days = 14
 release_expiration_days = 90
-`;
+`
 
   // 2. CloudFront Function preview-router.js
   const previewRouterCode = `// infra/terraform/functions/preview-router.js
@@ -247,7 +247,7 @@ function isAllDigits(s) {
   }
   return true;
 }
-`;
+`
 
   // 3. Workflow preview.yml
   const previewWorkflowCode = `# .github/workflows/preview.yml
@@ -400,7 +400,7 @@ jobs:
                 issue_number: context.issue.number, body,
               });
             }
-`;
+`
 
   // 4. Workflow deploy.yml
   const deployWorkflowCode = `# .github/workflows/deploy.yml
@@ -620,7 +620,7 @@ jobs:
         run: pnpm exec playwright test tests/smoke --project=chromium
         env:
           BASE_URL: https://\${{ fromJSON(vars.DEPLOY_CONFIG)[matrix.service].production_cloudfront_domain }}/
-`;
+`
 
   // 5. Workflow cleanup-preview.yml
   const cleanupWorkflowCode = `# .github/workflows/cleanup-preview.yml
@@ -671,7 +671,7 @@ jobs:
           # schedule 실행 시 닫힌 PR 목록과 대조하여 orphan prefix 리소스를 일괄 자동 정리합니다.
           # Grace period는 2일(48시간)로 설정하여 방금 닫힌 리소스는 잠시 대기
           DRY_RUN=false GRACE_DAYS=2 ./scripts/cleanup-preview.sh sweep
-`;
+`
 
   // 6. env.schema.ts
   const envSchemaCode = `// apps/${serviceName}/env.schema.ts
@@ -687,7 +687,7 @@ export const runtimeConfigSchema = z.object({
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
-`;
+`
 
   // 7. runtime-config.ts
   const runtimeConfigCode = `// apps/${serviceName}/src/lib/runtime-config.ts
@@ -754,7 +754,7 @@ export function useRuntimeConfig() {
 
   return { config, error };
 }
-`;
+`
 
   // 8. public env json templates
   const envPreviewJson = `{
@@ -762,21 +762,21 @@ export function useRuntimeConfig() {
   "apiBaseUrl": "https://sandbox-api.example.com",
   "sentryEnvironment": "frontend-preview",
   "featureFlagClientKey": "sdk_preview_mock_key_123"
-}`;
+}`
 
   const envStagingJson = `{
   "stage": "staging",
   "apiBaseUrl": "https://staging-api.example.com",
   "sentryEnvironment": "frontend-staging",
   "featureFlagClientKey": "sdk_staging_validated_key_456"
-}`;
+}`
 
   const envProductionJson = `{
   "stage": "production",
   "apiBaseUrl": "https://api.example.com",
   "sentryEnvironment": "frontend-production",
   "featureFlagClientKey": "sdk_production_secure_key_789"
-}`;
+}`
 
   // 9. Makefile
   const makefileCode = `# Makefile
@@ -829,7 +829,7 @@ rollback: ## 장애 대응 긴급 롤백 (ENV=production SHA=<commit_sha> DIST=<
 
 destroy: ## 모든 프로비저닝된 인프라 리소스 일괄 삭제 (주의)
 \tterraform -chdir=\$(TF_DIR) destroy
-`;
+`
 
   // 10. deploy-s3.sh
   const deployS3Code = `#!/usr/bin/env bash
@@ -869,7 +869,7 @@ aws s3 sync "\${SRC_DIR}" "\${DEST_S3_URI}" \\
   --delete
 
 echo "✅ Cache-optimized deployment completed successfully!"
-`;
+`
 
   return (
     <div style={{ background: 'var(--app-bg)', minHeight: '100vh', color: 'var(--app-ink)' }}>
@@ -1154,6 +1154,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* Service Identifier */}
               <div>
                 <label
+                  htmlFor="gen-service-name"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1165,6 +1166,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   서비스명 (Service Name)
                 </label>
                 <input
+                  id="gen-service-name"
                   type="text"
                   value={serviceName}
                   onChange={(e) =>
@@ -1187,6 +1189,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* AWS Account ID */}
               <div>
                 <label
+                  htmlFor="gen-aws-account-id"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1198,6 +1201,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   AWS 계정 ID (Account ID)
                 </label>
                 <input
+                  id="gen-aws-account-id"
                   type="text"
                   value={awsAccountId}
                   onChange={(e) => setAwsAccountId(e.target.value.replace(/[^0-9]/g, ''))}
@@ -1219,6 +1223,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* AWS Region */}
               <div>
                 <label
+                  htmlFor="gen-aws-region"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1230,6 +1235,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   AWS 리전 (Region)
                 </label>
                 <select
+                  id="gen-aws-region"
                   value={awsRegion}
                   onChange={(e) => setAwsRegion(e.target.value)}
                   style={{
@@ -1252,6 +1258,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* GitHub Owner */}
               <div>
                 <label
+                  htmlFor="gen-github-owner"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1263,6 +1270,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   GitHub Org/사용자명
                 </label>
                 <input
+                  id="gen-github-owner"
                   type="text"
                   value={githubOwner}
                   onChange={(e) => setGithubOwner(e.target.value)}
@@ -1283,6 +1291,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* GitHub Repo */}
               <div>
                 <label
+                  htmlFor="gen-github-repo"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1294,6 +1303,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   GitHub 저장소명
                 </label>
                 <input
+                  id="gen-github-repo"
                   type="text"
                   value={githubRepo}
                   onChange={(e) => setGithubRepo(e.target.value)}
@@ -1314,6 +1324,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* Build output dir */}
               <div>
                 <label
+                  htmlFor="gen-build-output-dir"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1325,6 +1336,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   빌드 출력 폴더 (Next.js static export 기준)
                 </label>
                 <input
+                  id="gen-build-output-dir"
                   type="text"
                   value={buildOutputDir}
                   onChange={(e) => setBuildOutputDir(e.target.value)}
@@ -1345,6 +1357,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
               {/* Package Manager */}
               <div>
                 <label
+                  htmlFor="gen-package-manager"
                   style={{
                     display: 'block',
                     fontSize: '12px',
@@ -1356,6 +1369,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   패키지 매니저
                 </label>
                 <select
+                  id="gen-package-manager"
                   value={packageManager}
                   onChange={(e) => setPackageManager(e.target.value)}
                   style={{
@@ -1426,6 +1440,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   {/* Apex Domain */}
                   <div>
                     <label
+                      htmlFor="gen-apex-domain"
                       style={{
                         display: 'block',
                         fontSize: '11px',
@@ -1437,6 +1452,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       Apex 루트 도메인
                     </label>
                     <input
+                      id="gen-apex-domain"
                       type="text"
                       value={apexDomain}
                       onChange={(e) => setApexDomain(e.target.value)}
@@ -1457,6 +1473,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   {/* Route53 Hosted Zone ID */}
                   <div>
                     <label
+                      htmlFor="gen-hosted-zone-id"
                       style={{
                         display: 'block',
                         fontSize: '11px',
@@ -1468,6 +1485,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       Route53 호스팅 영역 ID
                     </label>
                     <input
+                      id="gen-hosted-zone-id"
                       type="text"
                       value={hostedZoneId}
                       onChange={(e) => setHostedZoneId(e.target.value)}
@@ -1488,6 +1506,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   {/* Preview Subdomain */}
                   <div>
                     <label
+                      htmlFor="gen-preview-subdomain"
                       style={{
                         display: 'block',
                         fontSize: '11px',
@@ -1499,6 +1518,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       Preview 서브도메인 프리픽스
                     </label>
                     <input
+                      id="gen-preview-subdomain"
                       type="text"
                       value={previewSubdomain}
                       onChange={(e) => setPreviewSubdomain(e.target.value)}
@@ -1519,6 +1539,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   {/* Staging Host */}
                   <div>
                     <label
+                      htmlFor="gen-staging-host"
                       style={{
                         display: 'block',
                         fontSize: '11px',
@@ -1530,6 +1551,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       Staging 호스트 도메인
                     </label>
                     <input
+                      id="gen-staging-host"
                       type="text"
                       value={stagingHost}
                       onChange={(e) => setStagingHost(e.target.value)}
@@ -1550,6 +1572,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   {/* Production Host */}
                   <div>
                     <label
+                      htmlFor="gen-production-host"
                       style={{
                         display: 'block',
                         fontSize: '11px',
@@ -1561,6 +1584,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       Production 호스트 도메인
                     </label>
                     <input
+                      id="gen-production-host"
                       type="text"
                       value={productionHost}
                       onChange={(e) => setProductionHost(e.target.value)}
@@ -1602,18 +1626,18 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       ? '🤖 CI/CD (GitHub)'
                       : tab === 'app'
                         ? '💻 App Config (Zod)'
-                        : '📜 Scripts & CLI';
-                const active = activeTab === tab;
+                        : '📜 Scripts & CLI'
+                const active = activeTab === tab
                 return (
                   <button
                     key={tab}
                     onClick={() => {
-                      setActiveTab(tab);
+                      setActiveTab(tab)
                       // Set default subtabs when switching tabs
-                      if (tab === 'iac') setActiveSubTab('tfvars');
-                      else if (tab === 'cicd') setActiveSubTab('preview_yml');
-                      else if (tab === 'app') setActiveSubTab('schema');
-                      else if (tab === 'scripts') setActiveSubTab('makefile');
+                      if (tab === 'iac') setActiveSubTab('tfvars')
+                      else if (tab === 'cicd') setActiveSubTab('preview_yml')
+                      else if (tab === 'app') setActiveSubTab('schema')
+                      else if (tab === 'scripts') setActiveSubTab('makefile')
                     }}
                     style={{
                       padding: '10px 16px',
@@ -1631,7 +1655,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                   >
                     {label}
                   </button>
-                );
+                )
               })}
             </div>
 
@@ -1736,83 +1760,83 @@ echo "✅ Cache-optimized deployment completed successfully!"
 
               {/* Code display with copy button */}
               {(() => {
-                let currentCode = '';
-                let title = '';
-                let explanation = '';
-                let pathInfo = '';
+                let currentCode = ''
+                let title = ''
+                let explanation = ''
+                let pathInfo = ''
 
                 if (activeTab === 'iac') {
                   if (activeSubTab === 'tfvars') {
-                    currentCode = tfvarsCode;
-                    title = 'Terraform 변수 정의 파일';
+                    currentCode = tfvarsCode
+                    title = 'Terraform 변수 정의 파일'
                     explanation =
-                      '이 파일은 Terraform 인프라 프로비저닝에 필요한 변수 값을 정의합니다. Git에 커밋되지 않도록 보관하세요.';
-                    pathInfo = 'infra/terraform/terraform.tfvars';
+                      '이 파일은 Terraform 인프라 프로비저닝에 필요한 변수 값을 정의합니다. Git에 커밋되지 않도록 보관하세요.'
+                    pathInfo = 'infra/terraform/terraform.tfvars'
                   } else {
-                    currentCode = previewRouterCode;
-                    title = 'CloudFront Function Preview 라우터';
+                    currentCode = previewRouterCode
+                    title = 'CloudFront Function Preview 라우터'
                     explanation =
-                      '이 Javascript 코드는 CloudFront 엣지 가속 노드에서 실행되며 호스트 도메인(pr-123.domain) 또는 경로(domain/pr-123)를 해당 S3 버킷의 prefix(폴더)로 재작성해 줍니다.';
-                    pathInfo = 'infra/terraform/functions/preview-router.js';
+                      '이 Javascript 코드는 CloudFront 엣지 가속 노드에서 실행되며 호스트 도메인(pr-123.domain) 또는 경로(domain/pr-123)를 해당 S3 버킷의 prefix(폴더)로 재작성해 줍니다.'
+                    pathInfo = 'infra/terraform/functions/preview-router.js'
                   }
                 } else if (activeTab === 'cicd') {
                   if (activeSubTab === 'preview_yml') {
-                    currentCode = previewWorkflowCode;
-                    title = 'PR Preview 배포 워크플로';
+                    currentCode = previewWorkflowCode
+                    title = 'PR Preview 배포 워크플로'
                     explanation =
-                      'Pull Request가 생성되거나 업데이트될 때마다 자동으로 코드를 검증하고 빌드하여 OIDC를 통해 AWS OAC-S3 구조에 배포하고 PR 댓글로 URL을 작성해 주는 GitHub Actions 명세입니다.';
-                    pathInfo = '.github/workflows/preview.yml';
+                      'Pull Request가 생성되거나 업데이트될 때마다 자동으로 코드를 검증하고 빌드하여 OIDC를 통해 AWS OAC-S3 구조에 배포하고 PR 댓글로 URL을 작성해 주는 GitHub Actions 명세입니다.'
+                    pathInfo = '.github/workflows/preview.yml'
                   } else if (activeSubTab === 'deploy_yml') {
-                    currentCode = deployWorkflowCode;
-                    title = 'Staging 및 Production 릴리스 승격 워크플로';
+                    currentCode = deployWorkflowCode
+                    title = 'Staging 및 Production 릴리스 승격 워크플로'
                     explanation =
-                      'Build-Once 원칙을 준수하여 최초 1회 빌드한 정적 아티팩트를 보존한 뒤 staging에 배포하고, GitHub Environments 승인 절차를 거쳐 동일 아티팩트를 production으로 승격 및 CDN 갱신을 수행합니다.';
-                    pathInfo = '.github/workflows/deploy.yml';
+                      'Build-Once 원칙을 준수하여 최초 1회 빌드한 정적 아티팩트를 보존한 뒤 staging에 배포하고, GitHub Environments 승인 절차를 거쳐 동일 아티팩트를 production으로 승격 및 CDN 갱신을 수행합니다.'
+                    pathInfo = '.github/workflows/deploy.yml'
                   } else {
-                    currentCode = cleanupWorkflowCode;
-                    title = 'PR 종료 및 일회성 미사용 리소스 정리 워크플로';
+                    currentCode = cleanupWorkflowCode
+                    title = 'PR 종료 및 일회성 미사용 리소스 정리 워크플로'
                     explanation =
-                      'PR이 Close 되거나 매일 밤 정해진 시간에 작동하여, 이미 닫힌 PR의 프리픽스 스토리지 데이터를 영구 격리 삭제하여 불필요한 스토리지 과금을 자동으로 차단합니다.';
-                    pathInfo = '.github/workflows/cleanup-preview.yml';
+                      'PR이 Close 되거나 매일 밤 정해진 시간에 작동하여, 이미 닫힌 PR의 프리픽스 스토리지 데이터를 영구 격리 삭제하여 불필요한 스토리지 과금을 자동으로 차단합니다.'
+                    pathInfo = '.github/workflows/cleanup-preview.yml'
                   }
                 } else if (activeTab === 'app') {
                   if (activeSubTab === 'schema') {
-                    currentCode = envSchemaCode;
-                    title = 'Zod 런타임 환경 설정 검증 스키마';
+                    currentCode = envSchemaCode
+                    title = 'Zod 런타임 환경 설정 검증 스키마'
                     explanation =
-                      '애플리케이션이 구동된 직후 브라우저단에서 dynamic 로드할 설정 객체의 타입 안정성을 런타임에 최종 검사합니다.';
-                    pathInfo = `apps/${serviceName}/env.schema.ts`;
+                      '애플리케이션이 구동된 직후 브라우저단에서 dynamic 로드할 설정 객체의 타입 안정성을 런타임에 최종 검사합니다.'
+                    pathInfo = `apps/${serviceName}/env.schema.ts`
                   } else if (activeSubTab === 'runtime') {
-                    currentCode = runtimeConfigCode;
-                    title = 'Next.js / SPA 런타임 설정 로더';
+                    currentCode = runtimeConfigCode
+                    title = 'Next.js / SPA 런타임 설정 로더'
                     explanation =
-                      '클라이언트 브라우저가 접속한 URL 패턴을 읽어 path 기반 프리뷰인지 판별하고, /env.json 또는 /pr-123/env.json 요청을 발생시켜 전역 상태에 config를 주입하는 훅입니다.';
-                    pathInfo = `apps/${serviceName}/src/lib/runtime-config.ts`;
+                      '클라이언트 브라우저가 접속한 URL 패턴을 읽어 path 기반 프리뷰인지 판별하고, /env.json 또는 /pr-123/env.json 요청을 발생시켜 전역 상태에 config를 주입하는 훅입니다.'
+                    pathInfo = `apps/${serviceName}/src/lib/runtime-config.ts`
                   } else {
-                    currentCode = `// apps/${serviceName}/public/env.preview.json\n${envPreviewJson}\n\n// apps/${serviceName}/public/env.staging.json\n${envStagingJson}\n\n// apps/${serviceName}/public/env.production.json\n${envProductionJson}`;
-                    title = '환경별 정적 JSON 환경 설정 템플릿';
+                    currentCode = `// apps/${serviceName}/public/env.preview.json\n${envPreviewJson}\n\n// apps/${serviceName}/public/env.staging.json\n${envStagingJson}\n\n// apps/${serviceName}/public/env.production.json\n${envProductionJson}`
+                    title = '환경별 정적 JSON 환경 설정 템플릿'
                     explanation =
-                      '각 배포 위치의 루트에 빌드 결과물과 별도로 배치될 static JSON 설정들입니다. 이 환경 파일들에는 노출되면 안 되는 보안 시크릿 키는 작성하지 마세요.';
-                    pathInfo = `apps/${serviceName}/public/env.*.json`;
+                      '각 배포 위치의 루트에 빌드 결과물과 별도로 배치될 static JSON 설정들입니다. 이 환경 파일들에는 노출되면 안 되는 보안 시크릿 키는 작성하지 마세요.'
+                    pathInfo = `apps/${serviceName}/public/env.*.json`
                   }
                 } else if (activeTab === 'scripts') {
                   if (activeSubTab === 'makefile') {
-                    currentCode = makefileCode;
-                    title = '자동화 실행 메이크파일';
+                    currentCode = makefileCode
+                    title = '자동화 실행 메이크파일'
                     explanation =
-                      '긴 쉘 명령이나 스크립트 인자 처리를 단일 커맨드로 매핑하여 실수를 없애고 개발자 환경 온보딩 속도를 극대화합니다.';
-                    pathInfo = 'Makefile';
+                      '긴 쉘 명령이나 스크립트 인자 처리를 단일 커맨드로 매핑하여 실수를 없애고 개발자 환경 온보딩 속도를 극대화합니다.'
+                    pathInfo = 'Makefile'
                   } else {
-                    currentCode = deployS3Code;
-                    title = 'S3 Cache-Control 캐시 제어 배포 스크립트';
+                    currentCode = deployS3Code
+                    title = 'S3 Cache-Control 캐시 제어 배포 스크립트'
                     explanation =
-                      '정적 웹 리소스 중 HTML이나 설정 파일은 no-cache, must-revalidate로, static/css/js 등의 해시 처리 자산은 1년(immutable) 캐시 제어 헤더를 주입해 CDN 캐시 오염을 완벽 차단합니다.';
-                    pathInfo = 'scripts/deploy-s3.sh';
+                      '정적 웹 리소스 중 HTML이나 설정 파일은 no-cache, must-revalidate로, static/css/js 등의 해시 처리 자산은 1년(immutable) 캐시 제어 헤더를 주입해 CDN 캐시 오염을 완벽 차단합니다.'
+                    pathInfo = 'scripts/deploy-s3.sh'
                   }
                 }
 
-                const copyKey = `${activeTab}-${activeSubTab}`;
-                const isCopied = copiedState[copyKey] || false;
+                const copyKey = `${activeTab}-${activeSubTab}`
+                const isCopied = copiedState[copyKey] || false
 
                 return (
                   <div>
@@ -1892,7 +1916,7 @@ echo "✅ Cache-optimized deployment completed successfully!"
                       <code>{currentCode}</code>
                     </pre>
                   </div>
-                );
+                )
               })()}
             </div>
 
@@ -2065,5 +2089,5 @@ echo "✅ Cache-optimized deployment completed successfully!"
         }}
       />
     </div>
-  );
+  )
 }

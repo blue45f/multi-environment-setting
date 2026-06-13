@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 // 배포된 URL 기준 smoke 테스트. BASE_URL은 워크플로가 preview/staging/production URL로 주입한다.
 export default defineConfig({
@@ -12,4 +12,4 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-});
+})

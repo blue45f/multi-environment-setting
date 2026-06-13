@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 // 런타임 public config 스키마. (가이드 §8.2)
 //
@@ -13,7 +13,7 @@ export const runtimeConfigSchema = z.object({
   apiBaseUrl: z.string().url(),
   sentryEnvironment: z.string().min(1),
   featureFlagClientKey: z.string().min(1),
-});
+})
 
-export const RuntimeConfigSchema = runtimeConfigSchema;
-export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
+export const RuntimeConfigSchema = runtimeConfigSchema
+export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>

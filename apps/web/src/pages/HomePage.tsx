@@ -1,22 +1,22 @@
-import { useSyncExternalStore } from 'react';
-import { Link } from 'react-router-dom';
+import { useSyncExternalStore } from 'react'
+import { Link } from 'react-router-dom'
 
-import { useRuntimeConfig } from '@/lib/runtime-config';
-import { usePageMeta } from '@/lib/usePageMeta';
+import { useRuntimeConfig } from '@/lib/runtime-config'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 const stageMeta: Record<
   string,
   {
-    label: string;
-    headline: string;
-    symbol: string;
-    dot: string;
-    bg: string;
-    fg: string;
-    description: string;
-    route: string;
-    deployTrigger: string;
-    promotion: string;
+    label: string
+    headline: string
+    symbol: string
+    dot: string
+    bg: string
+    fg: string
+    description: string
+    route: string
+    deployTrigger: string
+    promotion: string
   }
 > = {
   preview: {
@@ -57,9 +57,9 @@ const stageMeta: Record<
     deployTrigger: 'manual approval',
     promotion: '릴리즈 완료 후 release artifact 보관',
   },
-};
+}
 
-const environmentOrder = ['preview', 'staging', 'production'] as const;
+const environmentOrder = ['preview', 'staging', 'production'] as const
 
 const pipelineSteps = [
   {
@@ -82,57 +82,57 @@ const pipelineSteps = [
     title: 'Clean up automatically',
     body: 'PR preview와 release artifact는 lifecycle/cleanup 스크립트로 오래 남지 않게 관리합니다.',
   },
-];
+]
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark' | 'system'
 
-const THEME_EVENT = 'demo:themechange';
+const THEME_EVENT = 'demo:themechange'
 
 function getThemeSnapshot(): Theme {
-  const attr = document.documentElement.getAttribute('data-theme');
-  return attr === 'light' || attr === 'dark' ? attr : 'system';
+  const attr = document.documentElement.getAttribute('data-theme')
+  return attr === 'light' || attr === 'dark' ? attr : 'system'
 }
 
 function getServerThemeSnapshot(): Theme {
-  return 'system';
+  return 'system'
 }
 
 function subscribeTheme(onChange: () => void): () => void {
-  window.addEventListener(THEME_EVENT, onChange);
-  window.addEventListener('storage', onChange);
+  window.addEventListener(THEME_EVENT, onChange)
+  window.addEventListener('storage', onChange)
   return () => {
-    window.removeEventListener(THEME_EVENT, onChange);
-    window.removeEventListener('storage', onChange);
-  };
+    window.removeEventListener(THEME_EVENT, onChange)
+    window.removeEventListener('storage', onChange)
+  }
 }
 
 function useTheme(): [Theme, () => void] {
-  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot)
 
   const cycle = () => {
-    const next: Theme = theme === 'system' ? 'dark' : theme === 'dark' ? 'light' : 'system';
+    const next: Theme = theme === 'system' ? 'dark' : theme === 'dark' ? 'light' : 'system'
     try {
-      if (next === 'system') localStorage.removeItem('theme');
-      else localStorage.setItem('theme', next);
+      if (next === 'system') localStorage.removeItem('theme')
+      else localStorage.setItem('theme', next)
     } catch {
       // localStorage 불가 환경: DOM 애트리뷰트만으로 동작(best-effort).
     }
-    if (next === 'system') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', next);
-    window.dispatchEvent(new Event(THEME_EVENT));
-  };
+    if (next === 'system') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', next)
+    window.dispatchEvent(new Event(THEME_EVENT))
+  }
 
-  return [theme, cycle];
+  return [theme, cycle]
 }
 
 const themeLabel: Record<Theme, { symbol: string; text: string }> = {
   system: { symbol: '◐', text: '시스템' },
   dark: { symbol: '●', text: '다크' },
   light: { symbol: '○', text: '라이트' },
-};
+}
 
 function StageBadge({ stage, testId }: { stage?: string; testId?: string }) {
-  const meta = stage ? stageMeta[stage] : undefined;
+  const meta = stage ? stageMeta[stage] : undefined
 
   return (
     <span
@@ -154,7 +154,7 @@ function StageBadge({ stage, testId }: { stage?: string; testId?: string }) {
       </span>
       <span className="mono">{stage ?? 'loading...'}</span>
     </span>
-  );
+  )
 }
 
 export function HomePage() {
@@ -162,13 +162,13 @@ export function HomePage() {
     title: 'Multi-Environment Demo — Build once · Deploy many 멀티환경 레퍼런스',
     description:
       'PR마다 격리된 preview, staging 검증, production 승격까지 — 한 번 빌드한 정적 산출물에 env.json만 갈아끼워 배포하는 S3+CloudFront·GitHub OIDC 멀티환경 레퍼런스',
-  });
+  })
 
-  const { config, error } = useRuntimeConfig();
-  const [theme, cycleTheme] = useTheme();
+  const { config, error } = useRuntimeConfig()
+  const [theme, cycleTheme] = useTheme()
 
-  const currentMeta = config ? stageMeta[config.stage] : undefined;
-  const tl = themeLabel[theme];
+  const currentMeta = config ? stageMeta[config.stage] : undefined
+  const tl = themeLabel[theme]
 
   return (
     <main id="content" className="demo-page">
@@ -275,8 +275,8 @@ export function HomePage() {
 
         <div className="env-rail" aria-label="preview staging production 환경 흐름">
           {environmentOrder.map((stage, index) => {
-            const meta = stageMeta[stage];
-            const active = config?.stage === stage;
+            const meta = stageMeta[stage]
+            const active = config?.stage === stage
             return (
               <article className={`env-card ${active ? 'is-active' : ''}`} key={stage}>
                 <div className="env-card__number">0{index + 1}</div>
@@ -298,7 +298,7 @@ export function HomePage() {
                   </div>
                 </dl>
               </article>
-            );
+            )
           })}
         </div>
       </section>
@@ -319,5 +319,5 @@ export function HomePage() {
         </div>
       </section>
     </main>
-  );
+  )
 }

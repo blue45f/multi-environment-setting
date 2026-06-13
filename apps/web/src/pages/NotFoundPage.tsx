@@ -1,14 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
 
-import { usePageMeta } from '@/lib/usePageMeta';
+import { usePageMeta } from '@/lib/usePageMeta'
 
 // catch-all 404. SPA에서 미등록 경로(`*`)에 매칭되며, S3/CloudFront 정적 호스팅에서도
 // 404.html 폴백으로 같은 화면을 보여줄 수 있다. 멀티환경 특성상 닫힌 PR의 /pr-<번호>/
 // 링크 진입이 가장 흔한 404 시나리오라, 일반 안내 대신 cleanup 맥락을 함께 설명한다.
-export const NOT_FOUND_TITLE = '페이지를 찾을 수 없음 · Multi-Environment Demo';
+export const NOT_FOUND_TITLE = '페이지를 찾을 수 없음 · Multi-Environment Demo'
 
 export function NotFoundPage() {
-  usePageMeta({ title: NOT_FOUND_TITLE });
+  usePageMeta({ title: NOT_FOUND_TITLE })
 
   return (
     <main id="content" className="demo-page">
@@ -39,5 +39,5 @@ export function NotFoundPage() {
         </div>
       </section>
     </main>
-  );
+  )
 }

@@ -8,3 +8,5 @@ minimumReleaseAgeExclude:
   - eslint-module-utils@2.13.0
   - hasown@2.0.4
   - typed-array-length@1.0.8
+  - '@heejun/eslint-config@5.0.0'
+  - '@heejun/prettier-config@3.0.0'
