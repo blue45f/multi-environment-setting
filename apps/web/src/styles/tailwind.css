@@ -1,0 +1,68 @@
+/* =========================================================================
+   Tailwind v4 — additive layer for multi-environment-setting (apps/web).
+
+   Preflight is intentionally omitted: src/app/globals.css owns the base reset
+   and all global element/component styles, so Tailwind utilities become
+   available for new and migrated components WITHOUT shifting any current page.
+   Only the theme + utilities layers are imported (no preflight, no base reset).
+
+   @theme maps the Tailwind color namespace onto the existing OKLCH design
+   tokens (defined in globals.css :root, and re-derived for dark via
+   prefers-color-scheme / [data-theme]). Because the @theme color keys reference
+   var(--app-*) / var(--stage-*) — names that DO NOT collide with any Tailwind
+   theme key — the light/dark theming keeps flowing through the unlayered
+   :root cascade automatically; a bg-app utility re-resolves per theme.
+
+   Fonts are deliberately not remapped: globals.css sets body / h1–h3 font
+   families directly (unlayered, so they win), and there is no --font-sans token
+   to mirror. Adopt full preflight later, page-by-page, as components migrate.
+   ========================================================================= */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  /* warm "paper" surface neutrals → bg-app / bg-panel / … + border-line / … */
+  --color-app: var(--app-bg);
+  --color-panel: var(--app-panel);
+  --color-panel-2: var(--app-panel-2);
+  --color-line: var(--app-line);
+  --color-line-strong: var(--app-line-strong);
+
+  /* ink (foreground) → text-ink / text-ink-muted / text-ink-subtle */
+  --color-ink: var(--app-ink);
+  --color-ink-muted: var(--app-ink-muted);
+  --color-ink-subtle: var(--app-ink-subtle);
+
+  /* accent — violet-blue, small-area only (focus / links / preview stage) */
+  --color-accent: var(--app-accent);
+  --color-accent-hover: var(--app-accent-hover);
+  --color-accent-fg: var(--app-accent-fg);
+  --color-accent-soft: var(--app-accent-soft);
+
+  /* status — ok / warn / err, each with bg + fg companions */
+  --color-ok: var(--app-ok);
+  --color-ok-bg: var(--app-ok-bg);
+  --color-ok-fg: var(--app-ok-fg);
+  --color-warn: var(--app-warn);
+  --color-warn-bg: var(--app-warn-bg);
+  --color-warn-fg: var(--app-warn-fg);
+  --color-err: var(--app-err);
+  --color-err-bg: var(--app-err-bg);
+  --color-err-fg: var(--app-err-fg);
+
+  /* stage aliases — the three deploy stages as semantic color roles */
+  --color-stage-preview: var(--stage-preview);
+  --color-stage-preview-bg: var(--stage-preview-bg);
+  --color-stage-preview-fg: var(--stage-preview-fg);
+  --color-stage-staging: var(--stage-staging);
+  --color-stage-staging-bg: var(--stage-staging-bg);
+  --color-stage-staging-fg: var(--stage-staging-fg);
+  --color-stage-production: var(--stage-production);
+  --color-stage-production-bg: var(--stage-production-bg);
+  --color-stage-production-fg: var(--stage-production-fg);
+
+  /* elevation → shadow-app (the single composite shadow globals.css uses) */
+  --shadow-app: var(--app-shadow);
+}
