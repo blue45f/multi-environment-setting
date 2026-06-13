@@ -41,7 +41,7 @@ function parseMarkdown(md: string): Block[] {
 
     // 2. Headings
     if (line.trim().startsWith('#')) {
-      const match = line.match(/^(#+)\s+(.*)$/);
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
       if (match) {
         blocks.push({
           type: 'heading',
@@ -99,13 +99,13 @@ function parseMarkdown(md: string): Block[] {
     }
 
     // 6. List
-    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+    const listMatch = line.match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
     if (listMatch) {
       const ordered = /^\d/.test(listMatch[2]);
       const items: string[] = [];
 
       while (i < lines.length) {
-        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+        const itemMatch = lines[i].match(/^(\s*)([-*+]|\d{1,9}\.)\s+(.*)$/);
         if (!itemMatch) break;
         items.push(itemMatch[3].trim());
         i++;
