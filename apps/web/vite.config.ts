@@ -1,10 +1,10 @@
 /// <reference types="vite/client" />
-import path from 'node:path';
+import path from 'node:path'
 
-import babel from '@rolldown/plugin-babel';
-import tailwindcss from '@tailwindcss/vite';
-import react, { reactCompilerPreset } from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import babel from '@rolldown/plugin-babel'
+import tailwindcss from '@tailwindcss/vite'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 // Vite SPA (React + React Router v7 + React Compiler).
 //
@@ -43,4 +43,4 @@ export default defineConfig({
     outDir: 'dist',
     target: 'es2022',
   },
-});
+})

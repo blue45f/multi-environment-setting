@@ -1,67 +1,68 @@
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
 
-import { usePageMeta } from '@/lib/usePageMeta';
+import { scriptCatalog, scriptPrinciples, scriptRunFlows } from './guide-data'
+import { getScriptContent } from './scriptSources'
 
-import { scriptCatalog, scriptPrinciples, scriptRunFlows } from './guide-data';
-import { getScriptContent } from './scriptSources';
+import type { ReactNode } from 'react'
+
+import { usePageMeta } from '@/lib/usePageMeta'
 
 function tokenizeCodeLine(line: string) {
   const tokenRegex =
-    /(#.*)|("[^"]*")|('[^']*')|(\$[a-zA-Z0-9_]+|\$\{[a-zA-Z0-9_]+\})|\b(if|then|else|fi|exit|echo|set|cd|for|in|do|done|function|return|local|export|eval|printf)\b/g;
+    /(#.*)|("[^"]*")|('[^']*')|(\$[a-zA-Z0-9_]+|\$\{[a-zA-Z0-9_]+\})|\b(if|then|else|fi|exit|echo|set|cd|for|in|do|done|function|return|local|export|eval|printf)\b/g
 
-  let lastIndex = 0;
-  const result: ReactNode[] = [];
-  let match;
+  let lastIndex = 0
+  const result: ReactNode[] = []
+  let match
 
   while ((match = tokenRegex.exec(line)) !== null) {
     if (match.index > lastIndex) {
-      result.push(line.substring(lastIndex, match.index));
+      result.push(line.substring(lastIndex, match.index))
     }
 
-    const [lexeme, comment, dstr, sstr, variable, keyword] = match;
+    const [lexeme, comment, dstr, sstr, variable, keyword] = match
 
     if (comment) {
       result.push(
         <span key={`c-${match.index}`} className="script-code-comment">
           {lexeme}
-        </span>,
-      );
+        </span>
+      )
     } else if (dstr || sstr) {
       result.push(
         <span key={`s-${match.index}`} className="script-code-string">
           {lexeme}
-        </span>,
-      );
+        </span>
+      )
     } else if (variable) {
       result.push(
         <span key={`v-${match.index}`} className="script-code-variable">
           {lexeme}
-        </span>,
-      );
+        </span>
+      )
     } else if (keyword) {
       result.push(
         <span key={`k-${match.index}`} className="script-code-keyword">
           {lexeme}
-        </span>,
-      );
+        </span>
+      )
     }
 
-    lastIndex = tokenRegex.lastIndex;
+    lastIndex = tokenRegex.lastIndex
   }
 
   if (lastIndex < line.length) {
-    result.push(line.substring(lastIndex));
+    result.push(line.substring(lastIndex))
   }
 
-  return result.length > 0 ? result : line || ' ';
+  return result.length > 0 ? result : line || ' '
 }
 
 export function ScriptsPage() {
   usePageMeta({
     title: '멀티베타 환경 개발가이드 · 스크립트',
     description: '멀티베타 환경 구축과 운영에 쓰는 스크립트 사용법과 안전장치',
-  });
+  })
 
   return (
     <>
@@ -135,8 +136,8 @@ export function ScriptsPage() {
 
         <div className="script-list">
           {scriptCatalog.map((script) => {
-            const content = getScriptContent(script.name);
-            const lines = content.split('\n');
+            const content = getScriptContent(script.name)
+            const lines = content.split('\n')
 
             return (
               <article key={script.name} className="script-row">
@@ -196,7 +197,7 @@ export function ScriptsPage() {
                   </details>
                 </div>
               </article>
-            );
+            )
           })}
         </div>
       </section>
@@ -227,5 +228,5 @@ export function ScriptsPage() {
         </Link>
       </section>
     </>
-  );
+  )
 }

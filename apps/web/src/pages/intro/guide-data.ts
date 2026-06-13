@@ -1,6 +1,6 @@
-import { SITE_URL } from '@/lib/site';
+import { SITE_URL } from '@/lib/site'
 
-export const representativeUrl = SITE_URL;
+export const representativeUrl = SITE_URL
 
 export const environmentModes = [
   {
@@ -28,7 +28,7 @@ export const environmentModes = [
     purpose: '품질 기준을 통과한 산출물을 가장 안정된 설정으로 운영 URL에 반영합니다.',
     checks: ['production API', 'observability 태그', 'rollback 포인트'],
   },
-];
+]
 
 export const architectureFlow = [
   {
@@ -70,7 +70,7 @@ export const architectureFlow = [
     role: 'QA/운영',
     output: '롤백 가능한 배포 이력',
   },
-];
+]
 
 export const architectureLayers = [
   {
@@ -100,7 +100,7 @@ export const architectureLayers = [
     detail:
       'production은 승인 게이트, preview는 PR close/schedule cleanup으로 생명주기를 제한합니다.',
   },
-];
+]
 
 export const theoryNotes = [
   {
@@ -119,7 +119,7 @@ export const theoryNotes = [
     title: '왜 prefix와 domain을 같이 설명하는가',
     body: '개인 포트폴리오 배포는 Vercel alias로 충분하지만, 운영형 AWS에서는 `web/pr-123`, `web/staging/current`처럼 prefix가 비용·권한·cleanup 경계가 됩니다.',
   },
-];
+]
 
 export const mermaidDiagrams = [
   {
@@ -149,7 +149,7 @@ export const mermaidDiagrams = [
   Rollback --> Production: promote previous release
   Preview --> Cleanup: PR close / schedule`,
   },
-];
+]
 
 export const platformGuides = [
   {
@@ -207,7 +207,7 @@ export const platformGuides = [
       'canonical URL과 공개 접속 포인트만 싱크',
     ],
   },
-];
+]
 
 export const domainFlow = [
   {
@@ -238,7 +238,7 @@ export const domainFlow = [
     detail:
       'CloudFront origin path를 각각 `/web/staging/current`, `/web/production/current`에 고정해 release 승격과 rollback을 단순화합니다.',
   },
-];
+]
 
 export const scriptCatalog = [
   {
@@ -499,7 +499,7 @@ export const scriptCatalog = [
     caution:
       '이미 존재하는 앱 이름이면 중단합니다. 현재 custom domain은 primary 서비스(`services[0]`) 기준이므로 추가 서비스 도메인은 별도 확장이 필요합니다.',
   },
-];
+]
 
 export const scriptRunFlows = [
   {
@@ -536,7 +536,7 @@ export const scriptRunFlows = [
     ],
     note: '장애 대응은 검증된 SHA로 되돌리고, cleanup은 dry-run 리포트를 먼저 확인하는 순서로 진행합니다.',
   },
-];
+]
 
 export const scriptPrinciples = [
   {
@@ -564,7 +564,7 @@ export const scriptPrinciples = [
     detail:
       '`invalidate.sh`는 기본적으로 entry/config만 지웁니다. 해시 asset 전체를 지우지 않아 비용과 전파 시간을 줄입니다.',
   },
-];
+]
 
 export const principles = [
   {
@@ -591,7 +591,7 @@ export const principles = [
     title: '권한은 작업별 최소화',
     desc: '루트키보다는 워크플로용 OIDC + 환경별 최소 권한을 기본으로 가는 것이 운영 비용보다 더 중요합니다.',
   },
-];
+]
 
 export const glossary = [
   {
@@ -629,7 +629,7 @@ export const glossary = [
     term: 'CDN',
     definition: '정적 파일을 지역 캐시로 빠르게 전달해 지연을 줄이는 네트워크 레이어입니다.',
   },
-];
+]
 
 export const usageCommands = [
   {
@@ -653,7 +653,7 @@ export const usageCommands = [
       "AWS_PROFILE=multi-env-free-sample aws s3 sync out s3://multi-env-free-sample-945203151945-ap-northeast-2/ --delete --cache-control 'no-cache, no-store, must-revalidate'",
     note: 'CloudFront 없이도 접속 가능한 저비용 공유용 경로입니다. 운영 전환 시 HTTPS가 필요하면 CloudFront를 붙입니다.',
   },
-];
+]
 
 export const walkthrough = [
   {
@@ -672,4 +672,4 @@ export const walkthrough = [
     title: '예시: PR 종료 정리',
     body: 'PR이 닫히면 preview prefix가 남지 않도록 정리하고, 오래된 임시 리소스는 lifecycle으로 회수합니다.',
   },
-];
+]

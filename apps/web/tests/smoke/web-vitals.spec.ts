@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
 // Core Web Vitals / 성능 회귀 가드.
 //
@@ -14,11 +14,11 @@ import { test, expect } from '@playwright/test';
 
 // 예산(ms / 단위 없음). 환경별로 빡세게/느슨하게 조정하려면 워크플로에서 env로 덮어쓴다.
 const num = (name: string, fallback: number): number => {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+  const raw = process.env[name]
+  if (!raw) return fallback
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
 
 // 기본값은 Google "good" 임계의 약 2배(=배포를 막을 만한 명백한 회귀에서만 실패).
 const BUDGET = {
@@ -26,60 +26,60 @@ const BUDGET = {
   cls: num('PERF_BUDGET_CLS', 0.25), // good ≤ 0.1
   ttfbMs: num('PERF_BUDGET_TTFB_MS', 3000), // good ≤ 800 (CDN miss 여유)
   loadMs: num('PERF_BUDGET_LOAD_MS', 8000), // 전체 load 상한
-};
+}
 
 type WebVitals = {
-  lcpMs: number | null;
-  cls: number;
-  ttfbMs: number | null;
-  domContentLoadedMs: number | null;
-  loadMs: number | null;
-};
+  lcpMs: number | null
+  cls: number
+  ttfbMs: number | null
+  domContentLoadedMs: number | null
+  loadMs: number | null
+}
 
 test('@preview Core Web Vitals 가 성능 예산 안에 있다', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'load' });
+  await page.goto('/', { waitUntil: 'load' })
 
   // 페이지 로드 후 stage가 채워질 때까지 기다린다(런타임 config 적용 완료 시점).
-  await expect(page.getByTestId('stage')).not.toHaveText('loading...');
+  await expect(page.getByTestId('stage')).not.toHaveText('loading...')
 
   const vitals = await page.evaluate<WebVitals>(async () => {
     const navEntry = performance.getEntriesByType('navigation')[0] as
       | PerformanceNavigationTiming
-      | undefined;
+      | undefined
 
     // LCP / CLS 는 PerformanceObserver 버퍼에서 읽는다(buffered: true 로 과거 엔트리 포함).
     const lcp = await new Promise<number | null>((resolve) => {
       try {
-        let last: number | null = null;
+        let last: number | null = null
         const obs = new PerformanceObserver((list) => {
-          const entries = list.getEntries();
+          const entries = list.getEntries()
           const tail = entries[entries.length - 1] as PerformanceEntry & {
-            renderTime?: number;
-            loadTime?: number;
-          };
-          if (tail) last = tail.renderTime || tail.loadTime || tail.startTime;
-        });
-        obs.observe({ type: 'largest-contentful-paint', buffered: true });
+            renderTime?: number
+            loadTime?: number
+          }
+          if (tail) last = tail.renderTime || tail.loadTime || tail.startTime
+        })
+        obs.observe({ type: 'largest-contentful-paint', buffered: true })
         // 추가 LCP 후보가 더 들어오지 않도록 잠깐 대기 후 확정.
         setTimeout(() => {
-          obs.disconnect();
-          resolve(last);
-        }, 500);
+          obs.disconnect()
+          resolve(last)
+        }, 500)
       } catch {
-        resolve(null);
+        resolve(null)
       }
-    });
+    })
 
-    let cls = 0;
+    let cls = 0
     try {
       const clsEntries = performance.getEntriesByType('layout-shift') as Array<
         PerformanceEntry & { value: number; hadRecentInput: boolean }
-      >;
+      >
       for (const e of clsEntries) {
-        if (!e.hadRecentInput) cls += e.value;
+        if (!e.hadRecentInput) cls += e.value
       }
     } catch {
-      cls = 0;
+      cls = 0
     }
 
     return {
@@ -88,37 +88,35 @@ test('@preview Core Web Vitals 가 성능 예산 안에 있다', async ({ page }
       ttfbMs: navEntry ? navEntry.responseStart - navEntry.requestStart : null,
       domContentLoadedMs: navEntry ? navEntry.domContentLoadedEventEnd : null,
       loadMs: navEntry ? navEntry.loadEventEnd : null,
-    };
-  });
+    }
+  })
 
   // 측정값을 리포트에 첨부 — 배포마다 추세를 눈으로 확인할 수 있게 한다.
   await test.info().attach('web-vitals.json', {
     body: JSON.stringify({ budget: BUDGET, measured: vitals }, null, 2),
     contentType: 'application/json',
-  });
-  console.log('[web-vitals]', JSON.stringify(vitals));
+  })
+  console.log('[web-vitals]', JSON.stringify(vitals))
 
   // 예산 단언. 값이 측정 불가(null)인 지표는 환경 차이로 흔들릴 수 있으므로 건너뛴다
   // (정적 export + 헤드리스에서 일부 지표가 비는 경우가 있어 게이트를 막지 않는다).
   if (vitals.lcpMs !== null) {
     expect(
       vitals.lcpMs,
-      `LCP ${Math.round(vitals.lcpMs)}ms > ${BUDGET.lcpMs}ms`,
-    ).toBeLessThanOrEqual(BUDGET.lcpMs);
+      `LCP ${Math.round(vitals.lcpMs)}ms > ${BUDGET.lcpMs}ms`
+    ).toBeLessThanOrEqual(BUDGET.lcpMs)
   }
-  expect(vitals.cls, `CLS ${vitals.cls.toFixed(3)} > ${BUDGET.cls}`).toBeLessThanOrEqual(
-    BUDGET.cls,
-  );
+  expect(vitals.cls, `CLS ${vitals.cls.toFixed(3)} > ${BUDGET.cls}`).toBeLessThanOrEqual(BUDGET.cls)
   if (vitals.ttfbMs !== null) {
     expect(
       vitals.ttfbMs,
-      `TTFB ${Math.round(vitals.ttfbMs)}ms > ${BUDGET.ttfbMs}ms`,
-    ).toBeLessThanOrEqual(BUDGET.ttfbMs);
+      `TTFB ${Math.round(vitals.ttfbMs)}ms > ${BUDGET.ttfbMs}ms`
+    ).toBeLessThanOrEqual(BUDGET.ttfbMs)
   }
   if (vitals.loadMs !== null && vitals.loadMs > 0) {
     expect(
       vitals.loadMs,
-      `load ${Math.round(vitals.loadMs)}ms > ${BUDGET.loadMs}ms`,
-    ).toBeLessThanOrEqual(BUDGET.loadMs);
+      `load ${Math.round(vitals.loadMs)}ms > ${BUDGET.loadMs}ms`
+    ).toBeLessThanOrEqual(BUDGET.loadMs)
   }
-});
+})
