@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 
 import { router } from './router';
 
+import './styles/tailwind.css';
 import './app/globals.css';
 
 createRoot(document.getElementById('root')!).render(

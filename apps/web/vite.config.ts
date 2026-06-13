@@ -2,6 +2,7 @@
 import path from 'node:path';
 
 import babel from '@rolldown/plugin-babel';
+import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
@@ -20,7 +21,7 @@ import { defineConfig } from 'vite';
 // preview-router.js가 document 요청을 루트 index.html로 매핑한다(인프라에서 배선).
 export default defineConfig({
   base: '/',
-  plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
