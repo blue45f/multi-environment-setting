@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 
 import { runtimeConfigSchema, type RuntimeConfig } from '../../env.schema'
 
+import { http, HTTPError, toJson } from './http'
+
 let cached: Promise<RuntimeConfig> | null = null
 
 function runtimeConfigUrl(): string {
@@ -24,15 +26,19 @@ function runtimeConfigUrl(): string {
 export function loadRuntimeConfig(): Promise<RuntimeConfig> {
   if (!cached) {
     const url = runtimeConfigUrl()
-    cached = fetch(url, { cache: 'no-store' })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`failed to load ${url}: ${res.status}`)
+    // ky 공유 클라이언트로 same-origin /env.json 을 읽는다. fetch 시절의
+    // `!res.ok` 분기 대신 ky 가 비-2xx 를 HTTPError 로 던지므로, UI 가 의존하는
+    // `failed to load ${url}: ${status}` 메시지 형태를 그대로 재현해 보존한다.
+    cached = toJson<unknown>(http.get(url, { cache: 'no-store' }))
+      .catch((error: unknown) => {
+        cached = null
+        if (error instanceof HTTPError) {
+          throw new Error(`failed to load ${url}: ${error.response.status}`)
         }
-        return res.json()
+        throw error
       })
       .then((json) => runtimeConfigSchema.parse(json))
-      .catch((error) => {
+      .catch((error: unknown) => {
         cached = null
         throw error
       })
