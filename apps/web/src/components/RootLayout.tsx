@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 
 import { PwaRegister } from './PwaRegister'
 
@@ -20,6 +20,7 @@ export function RootLayout() {
       <Outlet />
       <footer className="global-site-footer" aria-label="법적 고지">
         <nav>
+          <Link to="/design">디자인 시스템</Link>
           <a href={LEGAL_LINKS.terms} target="_blank" rel="noreferrer">
             이용약관
           </a>
