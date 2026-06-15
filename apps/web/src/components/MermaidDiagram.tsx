@@ -129,8 +129,13 @@ export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
       {svg ? (
         <div className="rendered-mermaid__svg" dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
-        <div className="rendered-mermaid__state" aria-live="polite">
-          {error ? '다이어그램을 렌더링하지 못했습니다.' : '다이어그램 렌더링 중'}
+        <div
+          className="rendered-mermaid__state"
+          data-loading={error ? undefined : 'true'}
+          aria-live="polite"
+          aria-busy={error ? undefined : true}
+        >
+          {error ? '다이어그램을 렌더링하지 못했습니다.' : '다이어그램 렌더링 중…'}
         </div>
       )}
       {error && <figcaption>{error}</figcaption>}

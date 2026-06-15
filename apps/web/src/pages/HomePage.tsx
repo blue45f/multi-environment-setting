@@ -1,65 +1,10 @@
-import { useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 
+import { StageBadge } from '@/components/StageBadge'
 import { useRuntimeConfig } from '@/lib/runtime-config'
+import { environmentOrder, stageMeta } from '@/lib/stages'
 import { usePageMeta } from '@/lib/usePageMeta'
-
-const stageMeta: Record<
-  string,
-  {
-    label: string
-    headline: string
-    symbol: string
-    dot: string
-    bg: string
-    fg: string
-    description: string
-    route: string
-    deployTrigger: string
-    promotion: string
-  }
-> = {
-  preview: {
-    label: 'Preview',
-    headline: 'PR마다 격리된 임시 환경',
-    symbol: '◆',
-    dot: 'var(--stage-preview)',
-    bg: 'var(--stage-preview-bg)',
-    fg: 'var(--stage-preview-fg)',
-    description:
-      'Pull Request 단위로 /pr-<번호>/ 경로가 생기고, 같은 빌드 산출물에 env.json만 주입됩니다.',
-    route: '/pr-123/',
-    deployTrigger: 'pull_request',
-    promotion: '리뷰가 끝나면 staging으로 승격',
-  },
-  staging: {
-    label: 'Staging',
-    headline: '릴리즈 전 검증 환경',
-    symbol: '▲',
-    dot: 'var(--stage-staging)',
-    bg: 'var(--stage-staging-bg)',
-    fg: 'var(--stage-staging-fg)',
-    description: 'main 또는 수동 배포가 production 전에 staging/current prefix를 먼저 갱신합니다.',
-    route: '/staging/current/',
-    deployTrigger: 'push main / workflow_dispatch',
-    promotion: '스모크 테스트 통과 후 production 배포',
-  },
-  production: {
-    label: 'Production',
-    headline: '사용자가 보는 운영 환경',
-    symbol: '●',
-    dot: 'var(--stage-production)',
-    bg: 'var(--stage-production-bg)',
-    fg: 'var(--stage-production-fg)',
-    description:
-      '검증된 정적 산출물을 production/current prefix로 복사하고 CloudFront invalidation을 수행합니다.',
-    route: '/production/current/',
-    deployTrigger: 'manual approval',
-    promotion: '릴리즈 완료 후 release artifact 보관',
-  },
-}
-
-const environmentOrder = ['preview', 'staging', 'production'] as const
+import { themeLabel, useTheme } from '@/lib/useTheme'
 
 const pipelineSteps = [
   {
@@ -83,79 +28,6 @@ const pipelineSteps = [
     body: 'PR preview와 release artifact는 lifecycle/cleanup 스크립트로 오래 남지 않게 관리합니다.',
   },
 ]
-
-type Theme = 'light' | 'dark' | 'system'
-
-const THEME_EVENT = 'demo:themechange'
-
-function getThemeSnapshot(): Theme {
-  const attr = document.documentElement.getAttribute('data-theme')
-  return attr === 'light' || attr === 'dark' ? attr : 'system'
-}
-
-function getServerThemeSnapshot(): Theme {
-  return 'system'
-}
-
-function subscribeTheme(onChange: () => void): () => void {
-  window.addEventListener(THEME_EVENT, onChange)
-  window.addEventListener('storage', onChange)
-  return () => {
-    window.removeEventListener(THEME_EVENT, onChange)
-    window.removeEventListener('storage', onChange)
-  }
-}
-
-function useTheme(): [Theme, () => void] {
-  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot)
-
-  const cycle = () => {
-    const next: Theme = theme === 'system' ? 'dark' : theme === 'dark' ? 'light' : 'system'
-    try {
-      if (next === 'system') localStorage.removeItem('theme')
-      else localStorage.setItem('theme', next)
-    } catch {
-      // localStorage 불가 환경: DOM 애트리뷰트만으로 동작(best-effort).
-    }
-    if (next === 'system') document.documentElement.removeAttribute('data-theme')
-    else document.documentElement.setAttribute('data-theme', next)
-    window.dispatchEvent(new Event(THEME_EVENT))
-  }
-
-  return [theme, cycle]
-}
-
-const themeLabel: Record<Theme, { symbol: string; text: string }> = {
-  system: { symbol: '◐', text: '시스템' },
-  dark: { symbol: '●', text: '다크' },
-  light: { symbol: '○', text: '라이트' },
-}
-
-function StageBadge({ stage, testId }: { stage?: string; testId?: string }) {
-  const meta = stage ? stageMeta[stage] : undefined
-
-  return (
-    <span
-      data-testid={testId}
-      title={meta ? `${meta.label} 환경` : undefined}
-      className="stage-badge"
-      style={{
-        background: meta?.bg ?? 'var(--app-panel-2)',
-        borderColor: meta?.dot ?? 'var(--app-line-strong)',
-        color: meta?.fg ?? 'var(--app-ink-muted)',
-      }}
-    >
-      <span
-        aria-hidden="true"
-        className="stage-badge__mark"
-        style={{ background: meta?.dot ?? 'var(--app-line-strong)' }}
-      >
-        {meta?.symbol ?? ''}
-      </span>
-      <span className="mono">{stage ?? 'loading...'}</span>
-    </span>
-  )
-}
 
 export function HomePage() {
   usePageMeta({

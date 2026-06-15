@@ -2327,3 +2327,511 @@ code,
     align-items: flex-start;
   }
 }
+
+/* ── mermaid loading 스켈레톤(plain text → 호흡하는 placeholder) ───────────── */
+.rendered-mermaid__state[data-loading='true'] {
+  position: relative;
+  overflow: hidden;
+  color: var(--app-ink-subtle);
+}
+
+.rendered-mermaid__state[data-loading='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklch, var(--app-line) 55%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: dsShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes dsShimmer {
+  from {
+    background-position: 180% 0;
+  }
+
+  to {
+    background-position: -80% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rendered-mermaid__state[data-loading='true']::after {
+    animation: none;
+    background: none;
+  }
+}
+
+/* =========================================================================
+   /design — 살아있는 디자인 시스템 가이드. .ds-* 는 이 페이지 전용 스코프이며
+   기존 토큰만 소비한다(새 팔레트 도입 X).
+   ========================================================================= */
+.ds-page {
+  padding-bottom: clamp(40px, 7vw, 90px);
+}
+
+.ds-hero {
+  padding-block: clamp(28px, 5vw, 64px) clamp(20px, 4vw, 48px);
+}
+
+.ds-hero h1 {
+  text-wrap: balance;
+}
+
+.ds-hero p {
+  max-width: 70ch;
+  text-wrap: pretty;
+}
+
+.ds-hero code,
+.ds-note code,
+.ds-measure code,
+.ds-section-heading code {
+  padding: 2px 6px;
+  border: 1px solid var(--app-line);
+  border-radius: 6px;
+  background: var(--app-panel-2);
+  font-size: 0.92em;
+}
+
+/* sticky 섹션 내비 — overflow 탈출 위해 패널 위에 위치, 가로 스크롤 허용 */
+.ds-section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: min(1180px, calc(100% - clamp(32px, 7vw, 96px)));
+  margin: 0 auto clamp(24px, 4vw, 40px);
+  padding: 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--app-panel) 82%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--app-shadow);
+}
+
+.ds-section-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--app-ink-muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ds-section-nav a:hover {
+  color: var(--app-ink);
+  background: var(--app-panel-2);
+}
+
+.ds-section {
+  width: min(1180px, calc(100% - clamp(32px, 7vw, 96px)));
+  margin-inline: auto;
+  padding-block: clamp(30px, 5vw, 64px);
+  scroll-margin-top: 78px;
+}
+
+.ds-section + .ds-section {
+  border-top: 1px solid var(--app-line);
+}
+
+.ds-subhead {
+  margin: clamp(26px, 4vw, 40px) 0 16px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--app-ink-subtle);
+}
+
+.ds-note {
+  margin: 0 0 16px;
+  max-width: 70ch;
+  color: var(--app-ink-muted);
+  line-height: 1.66;
+  text-wrap: pretty;
+}
+
+/* ── color swatches ───────────────────────────────────────────────────── */
+.ds-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.ds-swatch {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-panel);
+  min-width: 0;
+}
+
+.ds-swatch__chip {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 9px;
+}
+
+.ds-swatch__chip--big {
+  width: 52px;
+  height: 52px;
+}
+
+.ds-swatch__meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ds-swatch__token {
+  color: var(--app-ink);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ds-swatch__label {
+  color: var(--app-ink-muted);
+  font-size: 12px;
+}
+
+.ds-swatch__value {
+  color: var(--app-ink-subtle);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.ds-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.ds-status-group {
+  padding: 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  background: var(--app-panel);
+}
+
+.ds-status-group__name {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--app-panel-2);
+  color: var(--app-ink);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ds-status-group__swatches {
+  display: grid;
+  gap: 10px;
+}
+
+.ds-status-group .ds-swatch {
+  padding: 8px;
+  border-radius: 11px;
+  background: var(--app-panel-2);
+}
+
+/* ── stage cards ──────────────────────────────────────────────────────── */
+.ds-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.ds-stage-card {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px;
+  border: 1px solid var(--app-line);
+  border-radius: 18px;
+}
+
+.ds-stage-card strong {
+  font-size: 18px;
+  color: var(--app-ink);
+}
+
+.ds-stage-card__token {
+  color: var(--app-ink-muted);
+  font-size: 12px;
+}
+
+.ds-stage-card__value {
+  color: var(--app-ink-subtle);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* ── typography specimens ─────────────────────────────────────────────── */
+.ds-type-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  background: var(--app-line);
+}
+
+.ds-type-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.5fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding: 16px 18px;
+  background: var(--app-panel);
+}
+
+.ds-type-row__label {
+  color: var(--app-ink-subtle);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ds-type-row__sample {
+  min-width: 0;
+  color: var(--app-ink);
+  line-height: 1.1;
+  letter-spacing: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.ds-measure {
+  margin-top: clamp(24px, 4vw, 36px);
+}
+
+.ds-measure__body {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--app-ink-muted);
+  font-size: 18px;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+/* ── spacing & radii ──────────────────────────────────────────────────── */
+.ds-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(24px, 4vw, 48px);
+  align-items: start;
+}
+
+.ds-space-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ds-space-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ds-space-row__token {
+  flex: 0 0 52px;
+  color: var(--app-ink-subtle);
+  font-size: 12px;
+  text-align: right;
+}
+
+.ds-space-row__bar {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--app-accent);
+}
+
+.ds-radius-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+.ds-radius-item {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-panel);
+  text-align: center;
+}
+
+.ds-radius-item__box {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--app-line-strong);
+  background: var(--app-panel-2);
+}
+
+.ds-radius-item code {
+  color: var(--app-ink-muted);
+  font-size: 12px;
+}
+
+/* ── elevation & motion ───────────────────────────────────────────────── */
+.ds-elevation-card {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 24px;
+  border: 1px solid var(--app-line);
+  border-radius: 18px;
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
+}
+
+.ds-elevation-card code {
+  color: var(--app-ink-muted);
+  font-size: 13px;
+}
+
+.ds-motion-demo {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 120px;
+  appearance: none;
+  border: 1px solid var(--app-line);
+  border-radius: 18px;
+  background: var(--app-panel);
+  color: var(--app-ink-muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ds-motion-demo:hover,
+.ds-motion-demo:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--app-accent);
+  color: var(--app-ink);
+}
+
+/* ── component specimens ──────────────────────────────────────────────── */
+.ds-component-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.ds-specimen {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-panel);
+}
+
+.ds-specimen--grow {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.ds-specimen__caption {
+  color: var(--app-ink-subtle);
+  font-size: 11px;
+}
+
+.ds-specimen .error-banner {
+  width: 100%;
+}
+
+.ds-callout-warn {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--app-warn);
+  border-radius: 12px;
+  background: var(--app-warn-bg);
+  color: var(--app-warn-fg);
+  line-height: 1.55;
+}
+
+.ds-callout-warn strong {
+  margin-right: 4px;
+}
+
+.ds-code-chip {
+  padding: 5px 10px;
+  border: 1px solid var(--app-line);
+  border-radius: 6px;
+  background: var(--app-panel-2);
+  color: var(--app-ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.ds-code-block {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--app-ink) 8%, var(--app-panel));
+  color: var(--app-ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ds-config-sample {
+  max-width: 520px;
+}
+
+.ds-footer {
+  margin-top: clamp(28px, 5vw, 64px);
+  margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .ds-page,
+  .ds-section,
+  .ds-section-nav {
+    width: calc(100% - 30px);
+  }
+
+  .ds-type-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ds-section-nav {
+    border-radius: 18px;
+  }
+}

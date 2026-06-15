@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { IntroLayout } from './components/IntroLayout'
 import { RootLayout } from './components/RootLayout'
+import { DesignPage } from './pages/DesignPage'
 import { HomePage } from './pages/HomePage'
 import { GeneratorPage } from './pages/intro/GeneratorPage'
 import { IntroPage } from './pages/intro/IntroPage'
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'design', element: <DesignPage /> },
       {
         path: 'intro',
         element: <IntroLayout />,
