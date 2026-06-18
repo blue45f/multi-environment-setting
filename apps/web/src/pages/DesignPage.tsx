@@ -164,7 +164,7 @@ export function DesignPage() {
   const { values: tokenValues } = useComputedTokens(allColorTokens, theme)
 
   return (
-    <main id="content" className="intro-page ds-page">
+    <main id="main-content" tabIndex={-1} className="intro-page ds-page">
       <nav className="guide-route-nav" aria-label="디자인 시스템 탐색">
         <Link className="back-link" to="/">
           ← 데모로 돌아가기

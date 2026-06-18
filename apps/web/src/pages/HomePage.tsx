@@ -43,7 +43,7 @@ export function HomePage() {
   const tl = themeLabel[theme]
 
   return (
-    <main id="content" className="demo-page">
+    <main id="main-content" tabIndex={-1} className="demo-page">
       <section className="hero-shell" aria-labelledby="hero-title">
         <div className="topbar" aria-label="데모 탐색">
           <Link className="brand-chip" to="/">

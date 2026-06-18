@@ -11,7 +11,7 @@ const guideLinks = [
 
 export function IntroLayout() {
   return (
-    <main id="content" className="intro-page">
+    <main id="main-content" tabIndex={-1} className="intro-page">
       <nav className="guide-route-nav" aria-label="소개 페이지 라우터">
         <Link className="back-link" to="/">
           ← 데모로 돌아가기

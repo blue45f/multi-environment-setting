@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom'
 
+import { RouteAnnouncer } from './layout/RouteAnnouncer'
 import { PwaRegister } from './PwaRegister'
 
 // 루트 레이아웃 — Next app/layout.tsx 의 <html>/<body> 골격은 index.html 로 이동했고,
@@ -13,10 +14,11 @@ const LEGAL_LINKS = {
 export function RootLayout() {
   return (
     <>
-      <a className="skip-link" href="#content">
+      <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
       <PwaRegister />
+      <RouteAnnouncer />
       <Outlet />
       <footer className="global-site-footer" aria-label="법적 고지">
         <nav>
