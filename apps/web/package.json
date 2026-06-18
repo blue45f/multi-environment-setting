@@ -31,6 +31,9 @@
     "*.{ts,tsx,js,jsx,mjs}": [
       "eslint --max-warnings=0 --no-warn-ignored --fix",
       "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,html,css}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
@@ -46,6 +49,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "@heejun/eslint-config": "^5.0.0",
     "@heejun/prettier-config": "^3.0.0",
     "@playwright/test": "^1.60.0",
