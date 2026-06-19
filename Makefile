@@ -9,7 +9,7 @@ TF_DIR := infra/terraform
 
 .DEFAULT_GOAL := help
 .PHONY: help preflight bootstrap tf-init tf-plan tf-apply tf-output tf-backend gh-setup \
-        new-service app-install app-dev app-build app-test verify e2e-local rollback destroy
+        new-service app-install app-dev app-build app-test security-lint verify e2e-local rollback destroy
 
 help: ## 명령 목록
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /  →  /'
@@ -52,6 +52,13 @@ app-build: ## 앱 빌드 (static export → out/)
 
 app-test: ## lint + typecheck + unit test (단일 서비스 SERVICE=web)
 	cd $(APP_DIR) && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
+
+security-lint: ## 앱 의존성 보안 감사 + strict lint (모든 apps/*)
+	@for dir in apps/*/; do \
+	  [ -f "$${dir}package.json" ] || continue; \
+	  echo "════ [$$(basename "$$dir")] security lint ════"; \
+	  (cd "$$dir" && corepack pnpm run lint:security) || exit 1; \
+	done
 
 verify: ## 로컬 전체 검증 — 모든 apps/* + shellcheck + terraform validate (CI와 동일, AWS 불필요)
 	@./scripts/verify.sh

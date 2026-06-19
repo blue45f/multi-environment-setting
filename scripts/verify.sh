@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 로컬 전체 검증 — CI(validate.yml)와 같은 게이트를 AWS 없이 돌린다.
-# apps/* 의 모든 서비스에 대해 install/lint/typecheck/test/build,
+# apps/* 의 모든 서비스에 대해 install/lint/security lint/typecheck/test/build,
 # 그리고 (설치돼 있으면) shellcheck·terraform validate를 수행한다.
 set -uo pipefail
 
@@ -9,11 +9,12 @@ fail=0
 for dir in apps/*/; do
   [ -f "${dir}package.json" ] || continue
   svc="$(basename "$dir")"
-  echo "════ [$svc] install · lint · format:check · typecheck · test · build ════"
+  echo "════ [$svc] install · lint · security lint · format:check · typecheck · test · build ════"
   (
     cd "$dir" &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm lint &&
+      corepack pnpm run lint:security &&
       corepack pnpm run --if-present format:check &&
       corepack pnpm typecheck &&
       corepack pnpm test &&
