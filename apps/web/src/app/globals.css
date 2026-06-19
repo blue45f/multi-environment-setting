@@ -218,6 +218,99 @@ code,
   }
 }
 
+/*
+ * ── motion layer — entrance choreography · scroll reveal · live accents ──
+ *
+ * 정체성(엔지니어링 페이퍼 콘솔)을 바꾸지 않고 "살아있는 계기판" 느낌만 더한다.
+ * 모든 모션은 transform/opacity/filter 만 쓰고(레이아웃 비용 0), 토큰 색만 참조한다.
+ * 위의 prefers-reduced-motion 가드가 모든 animation/transition 을 0ms 로 죽이므로,
+ * 여기 정의는 "모션 ON"일 때만 동작한다. 리빌은 항상 보이는 기본값 위의 enhancement.
+ *
+ * exponential ease-out 만 사용(bounce/elastic 금지): --ease-out-expo.
+ */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* 스크롤 리빌 — 콘텐츠는 기본적으로 보인다(투명도 1). data-reveal 가 붙은 요소만
+   "아직 안 본 상태"에서 살짝 내려가 있고, data-revealed 또는 리듀스드모션/no-JS 에서
+   최종 상태로 수렴한다. transition 은 reduce 가드가 0ms 로 만든다. */
+[data-reveal] {
+  transition:
+    opacity 620ms var(--ease-out-expo),
+    transform 620ms var(--ease-out-expo),
+    filter 620ms var(--ease-out-expo);
+}
+
+[data-reveal='pending'] {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+}
+
+[data-reveal='pending'][data-reveal-from='left'] {
+  transform: translate3d(-26px, 0, 0);
+}
+
+[data-reveal='pending'][data-reveal-from='scale'] {
+  transform: scale(0.96);
+  filter: blur(6px);
+}
+
+[data-reveal='shown'] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* 스태거 — 리스트(env-rail/pipeline)의 각 항목을 순차 등장. revealed 부모 안에서만 작동.
+   custom property --stagger 로 인덱스를 받는다. */
+[data-reveal='shown'] [data-stagger] {
+  animation: revealRise 560ms var(--ease-out-expo) backwards;
+  animation-delay: calc(var(--stagger, 0) * 70ms);
+}
+
+@keyframes revealRise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 히어로 진입 안무 — 첫 페인트에서 한 번만, 위→아래로 차분히 쌓인다. */
+.demo-page [data-enter] {
+  animation: enterRise 720ms var(--ease-out-expo) backwards;
+  animation-delay: calc(var(--enter, 0) * 90ms + 80ms);
+}
+
+@keyframes enterRise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* no-JS / SSR / 리듀스드모션 보강: 리빌 속성이 안 붙어도 항상 보이게(blank 방지). */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .demo-page [data-enter],
+  [data-reveal='shown'] [data-stagger] {
+    animation: none !important;
+  }
+}
+
 /* ── multi-environment product demo ───────────────────────────────────── */
 .demo-page,
 .intro-page {
@@ -258,6 +351,8 @@ code,
 
 .hero-shell {
   position: relative;
+  isolation: isolate;
+  overflow: hidden;
   padding: clamp(18px, 2.6vw, 32px);
   border: 1px solid var(--app-line);
   border-radius: clamp(24px, 4vw, 44px);
@@ -275,8 +370,93 @@ code,
   box-shadow: var(--app-shadow);
 }
 
+/* 어코드 오로라 — stage 삼색(accent/warn/ok)이 아주 옅게 떠다니는 라이브 글로우.
+   히어로 뒤(z-index:-1)에서만, blur 로 번지고 천천히 드리프트한다. 정체성 색만 사용. */
+.hero-shell::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -40% -10% auto -10%;
+  height: 150%;
+  background:
+    radial-gradient(
+      42% 60% at 18% 12%,
+      color-mix(in oklch, var(--app-accent) 38%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 52% at 88% 8%,
+      color-mix(in oklch, var(--app-warn) 30%, transparent),
+      transparent 68%
+    ),
+    radial-gradient(
+      46% 58% at 64% 96%,
+      color-mix(in oklch, var(--app-ok) 26%, transparent),
+      transparent 70%
+    );
+  filter: blur(46px);
+  opacity: 0.55;
+  animation: heroAurora 22s ease-in-out infinite alternate;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hero-shell::before {
+    opacity: 0.42;
+  }
+}
+:root[data-theme='dark'] .hero-shell::before {
+  opacity: 0.42;
+}
+
+@keyframes heroAurora {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-2%, 1%, 0) scale(1.02);
+  }
+}
+
+/* 스캔라인 스윕 — 콘솔이 "스캔 중"인 듯한 가느다란 빛줄기가 위에서 한 번씩 지나간다. */
 .hero-shell::after {
-  content: none;
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in oklch, var(--app-accent) 12%, transparent) 48%,
+    color-mix(in oklch, var(--app-accent) 4%, transparent) 52%,
+    transparent 100%
+  );
+  background-size: 100% 220%;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+  animation: heroScan 9s var(--ease-out-quart) infinite;
+}
+
+@keyframes heroScan {
+  0% {
+    background-position: 0 -120%;
+  }
+  60%,
+  100% {
+    background-position: 0 220%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shell::before {
+    animation: none;
+  }
+  .hero-shell::after {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 .topbar,
@@ -317,6 +497,7 @@ code,
 }
 
 .brand-chip__grid {
+  position: relative;
   width: 28px;
   height: 28px;
   border-radius: 9px;
@@ -325,6 +506,42 @@ code,
     linear-gradient(0deg, transparent 46%, var(--app-panel) 46% 54%, transparent 54%),
     var(--app-accent);
   box-shadow: 0 8px 20px color-mix(in oklch, var(--app-accent) 22%, transparent);
+  transition: box-shadow 220ms var(--ease-out-expo);
+}
+
+/* 브랜드 램프 — 그리드 마크 위에 작은 라이브 점이 켜졌다 꺼진다(콘솔 가동 표시). */
+.brand-chip__grid::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--app-ok);
+  border: 1.5px solid var(--app-panel);
+  box-shadow: 0 0 0 0 color-mix(in oklch, var(--app-ok) 60%, transparent);
+  animation: lampPulse 2.6s ease-in-out infinite;
+}
+
+.brand-chip:hover .brand-chip__grid {
+  box-shadow: 0 10px 26px color-mix(in oklch, var(--app-accent) 38%, transparent);
+}
+
+@keyframes lampPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--app-ok) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--app-ok) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-chip__grid::after {
+    animation: none;
+  }
 }
 
 .topbar__links {
@@ -406,9 +623,35 @@ code,
 }
 
 .primary-action {
+  position: relative;
+  overflow: hidden;
   color: var(--app-accent-fg);
   background: var(--app-accent);
   box-shadow: 0 16px 28px color-mix(in oklch, var(--app-accent) 24%, transparent);
+}
+
+/* 버튼 광택 스윕 — hover/focus 시 빛줄기가 한 번 가로지른다(상태 피드백). */
+.primary-action::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in oklch, var(--app-accent-fg) 28%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-130%);
+  transition: transform 720ms var(--ease-out-expo);
+}
+
+.primary-action:hover::after,
+.primary-action:focus-visible::after {
+  transform: translateX(130%);
+}
+
+.primary-action:hover {
+  box-shadow: 0 20px 38px color-mix(in oklch, var(--app-accent) 34%, transparent);
 }
 
 .secondary-action {
@@ -428,11 +671,41 @@ code,
 }
 
 .runtime-card {
+  position: relative;
   padding: clamp(22px, 3vw, 30px);
   border: 1px solid var(--app-line-strong);
   border-radius: 28px;
   background: color-mix(in oklch, var(--app-panel) 94%, transparent);
   box-shadow: 0 18px 50px color-mix(in oklch, var(--app-ink) 9%, transparent);
+  transition:
+    transform 260ms var(--ease-out-expo),
+    box-shadow 260ms var(--ease-out-expo),
+    border-color 260ms var(--ease-out-expo);
+}
+
+/* config 로드 완료 시(data-live=true) 카드 상단에 stage 색 라이브 바가 켜진다. */
+.runtime-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(
+    90deg,
+    var(--stage-preview),
+    var(--stage-staging),
+    var(--stage-production)
+  );
+  opacity: 0;
+  transition: opacity 360ms var(--ease-out-expo);
+}
+
+.runtime-card[data-live='true']::before {
+  opacity: 0.9;
+}
+
+.runtime-card[data-live='true'] {
+  border-color: color-mix(in oklch, var(--app-accent) 24%, var(--app-line-strong));
 }
 
 .runtime-card__header {
@@ -493,7 +766,14 @@ code,
   font-weight: 800;
 }
 
+.stage-badge {
+  transition:
+    transform 200ms var(--ease-out-expo),
+    box-shadow 200ms var(--ease-out-expo);
+}
+
 .stage-badge__mark {
+  position: relative;
   width: 16px;
   height: 16px;
   display: inline-flex;
@@ -503,6 +783,32 @@ code,
   color: var(--app-accent-fg);
   font-size: 11px;
   line-height: 1;
+}
+
+/* 활성 stage 배지의 점이 호흡하듯 글로우 — "지금 이 환경이 떠 있다"는 라이브 신호. */
+.runtime-card[data-live='true'] .stage-badge__mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 currentcolor;
+  animation: markPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes markPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--app-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklch, var(--app-accent) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runtime-card[data-live='true'] .stage-badge__mark::after {
+    animation: none;
+  }
 }
 
 .config-list {
@@ -532,6 +838,141 @@ code,
   margin: 0;
   min-width: 0;
   word-break: break-word;
+}
+
+/* ── hero ledger — 레퍼런스의 실제 사실 3개(빌드 1 · 환경 3 · env.json) ──────── */
+.hero-ledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(18px, 3vw, 36px);
+  margin: clamp(28px, 4vw, 44px) 0 0;
+  padding-top: clamp(20px, 3vw, 28px);
+  border-top: 1px solid var(--app-line);
+}
+
+.hero-ledger__item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hero-ledger__item dt {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hero-ledger__value {
+  color: var(--app-ink);
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.hero-ledger__unit {
+  color: var(--app-accent-hover);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hero-ledger__item dd {
+  margin: 0;
+  color: var(--app-ink-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ── runtime card: stage 미리보기 알림 + 복사 액션 ────────────────────────── */
+.runtime-card__previewing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 9px 13px;
+  border: 1px solid var(--app-accent-soft);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--app-accent-soft) 60%, transparent);
+  color: var(--app-ink-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.runtime-card__previewing strong {
+  color: var(--app-accent-hover);
+}
+
+.runtime-card__reset {
+  appearance: none;
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: var(--app-panel);
+  color: var(--app-ink-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 180ms var(--ease-out-expo),
+    border-color 180ms var(--ease-out-expo);
+}
+
+.runtime-card__reset:hover {
+  color: var(--app-ink);
+  border-color: var(--app-line-strong);
+}
+
+.runtime-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.copy-config {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 999px;
+  background: var(--app-panel-2);
+  color: var(--app-ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 180ms var(--ease-out-expo),
+    color 180ms var(--ease-out-expo),
+    border-color 180ms var(--ease-out-expo),
+    background-color 180ms var(--ease-out-expo);
+}
+
+.copy-config:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--app-accent);
+}
+
+.copy-config:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.copy-config[data-copied='true'] {
+  border-color: var(--app-ok);
+  color: var(--app-ok-fg);
+  background: var(--app-ok-bg);
+}
+
+.copy-config__status {
+  color: var(--app-ink-subtle);
+  font-size: 12px;
 }
 
 .environment-board,
@@ -580,11 +1021,68 @@ code,
   min-height: 330px;
   padding: 22px;
   border-radius: 28px;
+  transition:
+    transform 240ms var(--ease-out-expo),
+    border-color 240ms var(--ease-out-expo),
+    box-shadow 240ms var(--ease-out-expo);
+}
+
+/* env-rail 카드는 클릭 가능한 stage 탐색기다 — button 리셋 + 포인터 어포던스. */
+button.env-card {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.env-card:hover,
+.env-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--app-line-strong);
+  box-shadow: 0 24px 52px color-mix(in oklch, var(--app-ink) 10%, transparent);
 }
 
 .env-card.is-active {
   border-color: var(--app-accent);
   box-shadow: 0 20px 48px color-mix(in oklch, var(--app-accent) 14%, transparent);
+}
+
+.env-card.is-active:hover,
+.env-card.is-active:focus-visible {
+  border-color: var(--app-accent);
+  box-shadow: 0 26px 56px color-mix(in oklch, var(--app-accent) 20%, transparent);
+}
+
+/* 선택(focus) 상태 — stage 탐색기에서 지금 카드에서 미리보는 환경 */
+.env-card.is-selected {
+  border-color: var(--app-accent-hover);
+  box-shadow: 0 22px 50px color-mix(in oklch, var(--app-accent) 16%, transparent);
+}
+
+.env-card__hint {
+  position: absolute;
+  left: 22px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-accent-hover);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 200ms var(--ease-out-expo),
+    transform 200ms var(--ease-out-expo);
+}
+
+.env-card:hover .env-card__hint,
+.env-card:focus-visible .env-card__hint,
+.env-card.is-selected .env-card__hint {
+  opacity: 1;
+  transform: none;
 }
 
 .env-card__number {
@@ -654,8 +1152,46 @@ code,
   border-radius: 24px;
 }
 
+.pipeline-step {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 240ms var(--ease-out-expo),
+    border-color 240ms var(--ease-out-expo),
+    box-shadow 240ms var(--ease-out-expo);
+}
+
+/* 파이프라인 스텝 — 좌상단에서 accent 빛이 hover 시 번진다(순서 흐름 강조). */
+.pipeline-step::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 80%;
+  height: 80%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklch, var(--app-accent) 22%, transparent),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 280ms var(--ease-out-expo);
+  pointer-events: none;
+}
+
+.pipeline-step:hover {
+  transform: translateY(-4px);
+  border-color: var(--app-line-strong);
+  box-shadow: 0 22px 48px color-mix(in oklch, var(--app-ink) 9%, transparent);
+}
+
+.pipeline-step:hover::before {
+  opacity: 1;
+}
+
 .pipeline-step span,
 .layer-card span {
+  position: relative;
   color: var(--app-accent-hover);
   font-weight: 950;
 }
