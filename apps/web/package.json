@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.4.0+sha512.f0febc7e37552ab485494a914241b338e0b3580b93d54ce31f00933015880863129038a1b4ae4e414a0ee63ac35bf21197e990172c4a68256450b5636310968f",
+  "packageManager": "pnpm@11.4.0",
   "engines": {
     "node": ">=24.16.0"
   },
@@ -26,6 +26,13 @@
     "ci": "pnpm run format:check && pnpm run lint:ci && pnpm run typecheck && pnpm run test && pnpm run build",
     "verify": "pnpm run ci",
     "verify:push": "pnpm run verify && pnpm run lint:security",
+    "turbo:dev": "pnpm exec turbo run dev",
+    "turbo:build": "pnpm exec turbo run build",
+    "turbo:typecheck": "pnpm exec turbo run typecheck",
+    "turbo:test": "pnpm exec turbo run test --concurrency=1",
+    "turbo:lint": "pnpm exec turbo run lint",
+    "turbo:format": "pnpm exec turbo run format",
+    "turbo:format:check": "pnpm exec turbo run format:check",
     "prepare": "husky"
   },
   "prettier": "@heejun/prettier-config",
@@ -71,6 +78,7 @@
     "lint-staged": "^17.0.7",
     "prettier": "^3.8.4",
     "tailwindcss": "^4.3.0",
+    "turbo": "^2.9.18",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
