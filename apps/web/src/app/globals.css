@@ -1369,11 +1369,41 @@ button.env-card {
   .hero-copy h1,
   .intro-hero h1,
   .guide-hero h1 {
-    font-size: clamp(40px, 16vw, 64px);
+    /* 360px 폭에서 16vw(=57.6px)는 긴 한글 헤드라인을 6줄까지 밀어내 런타임 패널을
+       완전히 fold 아래로 보냈다. 스케일을 낮춰 헤드라인을 압축하고 핵심 패널을 끌어올린다. */
+    font-size: clamp(34px, 12.5vw, 52px);
+    line-height: 1.02;
+  }
+
+  /* 히어로 상단 여백도 360px에선 과하다 — fold 위로 콘텐츠를 더 끌어올린다. */
+  .topbar {
+    margin-bottom: clamp(20px, 5vw, 40px);
+  }
+
+  .hero-lede {
+    font-size: 16px;
   }
 
   .guide-hero h1 {
-    font-size: clamp(38px, 12vw, 54px);
+    font-size: clamp(34px, 11vw, 50px);
+  }
+
+  /* 터치 타깃 — 작은 ghost/유틸 버튼을 한 손가락 탭에 편한 44px 바닥으로 맞춘다
+     (primary/secondary action 과 동일한 최소 높이 토큰에 정렬). */
+  .theme-toggle,
+  .copy-config {
+    min-height: 44px;
+  }
+
+  /* 텍스트 내비/푸터 링크 — 글자 크기는 그대로 두고 세로 패딩으로 탭 영역만 키운다.
+     음수 마진으로 시각적 행 리듬은 유지(레이아웃이 부풀지 않음). WCAG 2.5.8. */
+  .topbar__links a,
+  .global-site-footer nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-block: 8px;
+    margin-block: -8px;
   }
 }
 
